@@ -34,7 +34,14 @@ setup_server:
   #  /etc/letsencrypt/live/facepals.fun/privkey.pem
 	sudo certbot renew --dry-run
 
+	git clone https://github.com/brianhempel/facepals.fun.git
+
 	# https://meetrix.io/blog/webrtc/coturn/installation.html
 	sudo apt install coturn
+	# uncomment TURNSERVER_ENABLED=1
+	sudo vim /etc/default/coturn
+	mkdir log
+	sudo cp facepals.fun/turnserver.conf /etc/turnserver.conf
+	sudo service coturn restart
 
 
