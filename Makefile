@@ -40,7 +40,7 @@ setup_server:
 	sudo apt install coturn
 	# uncomment TURNSERVER_ENABLED=1
 	sudo vim /etc/default/coturn
-	mkdir log
+	sudo chmod 777 /var/log
 	sudo cp facepals.fun/turnserver.conf /etc/turnserver.conf
 	sudo service coturn restart
 
