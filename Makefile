@@ -42,6 +42,10 @@ setup_server:
 	sudo vim /etc/default/coturn
 	sudo chmod 777 /var/log
 	sudo cp facepals.fun/turnserver.conf /etc/turnserver.conf
+	# Add AmbientCapabilities=CAP_NET_BIND_SERVICE to [Service] section
+	# https://github.com/coturn/coturn/issues/421#issuecomment-597552224
+	sudo vim /lib/systemd/system/coturn.service
+	sudo systemctl daemon-reload
 	sudo service coturn restart
 
 
