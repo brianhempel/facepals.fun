@@ -4,11 +4,13 @@
   </head>
   <body>
     <h1>Face Pals</h1>
-    <canvas id="myFaceCanvas"></canvas>
-    <video id="myVid" autoplay muted></video>
-    <div id="peers"></div>
+    <canvas id="gameCanvas" width=1024 height=768 style="border: solid 1px black"></canvas>
+    <video id="myVid" muted style="display: none"></video>
+    <canvas id="myFaceCanvas" style="display: none"></canvas>
+    <div id="peers" style="display: none"></div>
     <script src="/static/js/adapter.js"></script>
     <script src="/static/js/face-api.js"></script>
     <script src="/static/js/face_conferencing.js"></script>
+    <script src="/static/js/game.js"></script>
   </body>
 </html>

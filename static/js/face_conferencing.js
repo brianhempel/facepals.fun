@@ -1,8 +1,7 @@
 let myVid           = document.getElementById('myVid');
-let myCanvas        = document.getElementById('myCanvas');
 let myFaceCanvas    = document.getElementById('myFaceCanvas');
 let peersDiv        = document.getElementById('peers');
-let miniFaceSize    = 128;
+let miniFaceSize    = 96;
 myFaceCanvas.width  = miniFaceSize;
 myFaceCanvas.height = miniFaceSize;
 var myWidth, myHeight;
@@ -48,7 +47,7 @@ faceapi.nets.tinyFaceDetector.loadFromUri('/static/models');
 
 function faceDetect() {
   var detectStart = new Date();
-  faceapi.detectSingleFace(myVid, new faceapi.TinyFaceDetectorOptions())
+  faceapi.detectSingleFace(myVid, new faceapi.TinyFaceDetectorOptions({ inputSize: 288 }))
     .then(detection => {
       if (detection) {
         // console.log(detection);
@@ -59,8 +58,8 @@ function faceDetect() {
       }
       detectDuration = new Date() - detectStart;
       // console.log(detectDuration);
-      // Target no more than 50% processing time spent on face detection.
-      window.setTimeout(faceDetect, Math.max(detectDuration, 33));
+      // Target no more than 33% processing time spent on face detection.
+      window.setTimeout(faceDetect, Math.max(detectDuration*2, 33));
     });
 }
 
@@ -76,25 +75,29 @@ function faceDetect() {
 // 4a. If other_peer_name < my_peer_name, then:
 //   (i)  Post my JSON RTCPeerConnectionDescription offer to
 //       /rooms/ROOM_NAME/peers/OTHER_PEER_NAME/offers/MY_PEER_NAME
-//   (ii) Poll /rooms/ROOM_NAME/peers/MY_PEER_NAME/answers/OTHER_PEER_NAME
+//   (ii) Add a data channel
+//   (iii) Poll /rooms/ROOM_NAME/peers/MY_PEER_NAME/answers/OTHER_PEER_NAME
 //       for the answering description
 
 // 4b. If other_peer_name > my_peer_name, then:
 //   (i)  Poll /rooms/ROOM_NAME/peers/MY_PEER_NAME/offers/OTHER_PEER_NAME for the offer
-//   (ii) Post my JSON RTCPeerConnectionDescription answer to
-//       /rooms/ROOM_NAME/peers/OTHER_PEER_NAME/answers/MY_PEER_NAME
+//   (ii) Listen for a data channel
+//   (iii) Post my JSON RTCPeerConnectionDescription answer to
+//        /rooms/ROOM_NAME/peers/OTHER_PEER_NAME/answers/MY_PEER_NAME
 
 function acquirePeerName() {
   fetch('/rooms/' + roomName + '/peers', { method: 'POST' })
   .then(resp => resp.ok ? resp.json() :  Promise.reject(resp))
   .then(data => {
-    myPeerName = data.peer_name
-    console.log(data);
+    myPeerName = data.peer_name;
     pollForPeers();
   }).catch(err => {
     console.warn("Couldn't acquire peer name", err);
     window.setTimeout(acquirePeerName, 3000);
   });
+
+  // myPeerName = "69873513-46801558-cc6cfce0-e4830396";
+  // pollForPeers();
 }
 
 function pollForAnswerFrom(peerName) {
@@ -133,15 +136,33 @@ function makeOnTrackHandler(peerName) {
   return function (event) {
     if (!peers[peerName].vidElem) {
       let vidElem = document.createElement("video");
-      vidElem.autoplay = true;
       vidElem.width = miniFaceSize;
       vidElem.height = miniFaceSize;
       peersDiv.appendChild(vidElem);
       peers[peerName].vidElem = vidElem;
       vidElem.srcObject = event.streams[0];
+      vidElem.play();
+    }
+  };
+}
+
+function makeOnMessageHandler(peerName) {
+  return function (event) {
+    // Up to the game to implement this.
+    // console.log("receiving ", event.data);
+    handleMessage(peerName, JSON.parse(event.data));
+  };
+}
+
+function broadcast(data) {
+  for (peerName in peers) {
+    // console.log(peers[peerName].dataChan);
+    if (peers[peerName].dataChan && peers[peerName].dataChan.readyState === "open") {
+      // console.log("broadcasting ", data);
+      peers[peerName].dataChan.send(JSON.stringify(data));
     }
   }
-}
+};
 
 function pollForIceCandidates(peerName, delayMs) {
   if (!peers[peerName].iceCandidateIdsProcessed) {
@@ -178,7 +199,14 @@ function pollForOfferFrom(peerName) {
     peers[peerName].status = 'answering';
     let peerConn = peers[peerName].peerConn || new RTCPeerConnection(peerConnConfig);
     if (!peers[peerName].peerConn) {
-      peerConn.onicecandidate = makeOnIceCandidateHandler(peerName);
+      peerConn.ondatachannel = event => {
+        console.log("ondatachannel", event);
+        peers[peerName].dataChan           = event.channel;
+        peers[peerName].dataChan.onmessage = makeOnMessageHandler(peerName);
+        peers[peerName].dataChan.onopen    = event => console.log("Channel opened to " + peerName);
+        peers[peerName].dataChan.onclose   = event => console.log("Channel closed to " + peerName);
+      };
+      peerConn.onicecandidate  = makeOnIceCandidateHandler(peerName);
       peerConn.addTrack(myFaceStream.getVideoTracks()[0], myVidStream);
       peerConn.addTrack(myVidStream.getAudioTracks()[0], myVidStream);
       peers[peerName].peerConn = peerConn;
@@ -233,6 +261,12 @@ function pollForPeers() {
           peers[peerName].status = 'offering';
           let peerConn = peers[peerName].peerConn || new RTCPeerConnection(peerConnConfig);
           if (!peers[peerName].peerConn) {
+            let dataChan             = peerConn.createDataChannel('channel to ' + peerName, { ordered: false, maxRetransmits: 0 });
+            console.log(dataChan);
+            dataChan.onmessage       = makeOnMessageHandler(peerName);
+            dataChan.onopen          = event => console.log("Channel opened to " + peerName);
+            dataChan.onclose         = event => console.log("Channel closed to " + peerName);
+            peers[peerName].dataChan = dataChan;
             peerConn.onicecandidate = makeOnIceCandidateHandler(peerName);
             peerConn.addTrack(myFaceStream.getVideoTracks()[0], myVidStream);
             peerConn.addTrack(myVidStream.getAudioTracks()[0], myVidStream);
@@ -280,25 +314,7 @@ function pollForPeers() {
   });
 }
 
-navigator.mediaDevices
-  .getUserMedia({ audio: true, video: true })
-  .then(stream => {
-    myVidStream     = stream;
-    myWidth         = stream.getVideoTracks()[0].getSettings().width;
-    myHeight        = stream.getVideoTracks()[0].getSettings().height;
-    myVid.width     = myWidth;
-    myVid.height    = myHeight;
-    myVid.srcObject = stream;
-    faceCX          = myWidth / 2;
-    faceCY          = myHeight / 2;
-    faceSize        = Math.min(myWidth, myHeight);
-    targetFaceCX    = faceCX;
-    targetFaceCY    = faceCY;
-    targetFaceSize  = faceSize;
-  }).catch(e => console.log('getUserMedia: ', e));
-
 myVid.addEventListener('playing', () => {
-  // let myCtx = myCanvas.getContext('2d');
   let myFaceCtx = myFaceCanvas.getContext('2d');
 
   function onFrame() {
@@ -312,7 +328,7 @@ myVid.addEventListener('playing', () => {
     faceCY   = (1.0 - push)*faceCY + push*targetFaceCY;
     faceSize = (1.0 - push)*faceSize + push*targetFaceSize;
 
-    myFaceCtx.drawImage(myVid, faceCX - faceSize/2, faceCY - faceSize/2, faceSize, faceSize, 0, 0, 128, 128);
+    myFaceCtx.drawImage(myVid, faceCX - faceSize/2, faceCY - faceSize/2, faceSize, faceSize, 0, 0, miniFaceSize, miniFaceSize);
 
     requestAnimationFrame(onFrame);
   }
@@ -321,3 +337,21 @@ myVid.addEventListener('playing', () => {
   faceDetect();
   acquirePeerName();
 });
+
+navigator.mediaDevices
+  .getUserMedia({ audio: true, video: { width: 384, height: 288 } })
+  .then(stream => {
+    myVidStream     = stream;
+    myWidth         = stream.getVideoTracks()[0].getSettings().width;
+    myHeight        = stream.getVideoTracks()[0].getSettings().height;
+    myVid.width     = myWidth;
+    myVid.height    = myHeight;
+    myVid.srcObject = stream;
+    faceCX          = myWidth / 2;
+    faceCY          = myHeight / 2;
+    faceSize        = Math.min(myWidth, myHeight);
+    targetFaceCX    = faceCX;
+    targetFaceCY    = faceCY;
+    targetFaceSize  = faceSize;
+    myVid.play();
+  }).catch(e => console.log('getUserMedia: ', e));
