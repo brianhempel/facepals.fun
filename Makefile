@@ -4,14 +4,13 @@ server: server.ml
 clean:
 	rm server.o server.cmx server.cmi
 
-setup:
+dev_setup:
 	brew install coturn
 	opam switch 4.11.1
 	# opam install dune
 	opam install opium core
 
 run: server
-	turnserver -v &
 	./server
 
 setup_server:
