@@ -32,6 +32,15 @@ let respond_with_json_file path =
       ()
     |> Lwt.return
 
+let respond_with_known_html path =
+  let open Lwt.Syntax in
+  let* str = Lwt_io.with_file ~mode:Lwt_io.Input path Lwt_io.read in
+  Response.make
+    ~body:(Body.of_string str)
+    ~headers:(Headers.of_list [("content-type", "text/html")])
+    ()
+  |> Lwt.return
+
 let new_peer_name req =
   let room_name = Router.param req "room_name" in
   let random_name =
@@ -46,9 +55,18 @@ let list_peers req =
   let room_name = Router.param req "room_name" in
   let peers_dir_path = Core.Filename.of_parts ["rooms"; room_name; "peers"] in
   let open Lwt.Syntax in
-  let* dir_handle = Lwt_unix.opendir peers_dir_path in
-  let* entries_array = Lwt_unix.readdir_n dir_handle 100_000 in
-  let peer_names = entries_array |> Array.to_list |> List.filter (fun entry -> entry.[0] != '.') in
+  let* path_exists = Lwt_unix.file_exists peers_dir_path in
+  let* peer_names =
+    if path_exists then
+      let* dir_handle    = Lwt_unix.opendir peers_dir_path in
+      let* entries_array = Lwt_unix.readdir_n dir_handle 100_000 in
+      entries_array
+      |> Array.to_list
+      |> List.filter (fun entry -> entry.[0] != '.')
+      |> Lwt.return
+    else
+      Lwt.return []
+  in
   Response.of_json (`Assoc [ "peers", `List (List.map (fun name -> `String name) peer_names) ])
   |> Lwt.return
 
@@ -103,7 +121,7 @@ let list_ice_candidate_ids req =
 let get_ice_candidate req =
   let room_name = Router.param req "room_name" in
   let target_peer_name = Router.param req "peer_name" in
-  let sending_peer_name = Routr.param req "sending_peer_name" in
+  let sending_peer_name = Router.param req "sending_peer_name" in
   let ice_candidate_id = Router.param req "ice_candidate_id" in
   respond_with_json_file @@ Core.Filename.of_parts ["rooms"; room_name; "peers"; target_peer_name; "ice_candidates"; sending_peer_name; ice_candidate_id]
 
@@ -128,12 +146,16 @@ let get_ice_candidate req =
     (ii) Post my JSON RTCPeerConnectionDescription answer to
          /rooms/ROOM_NAME/peers/OTHER_PEER_NAME/answers/MY_PEER_NAME
  *)
+
+ (* START HERE: need to terminate SSL *)
 let _ =
   Random.self_init ();
   Logs.set_reporter (Logs_fmt.reporter ());
   Logs.set_level (Some Logs.Debug);
   App.empty
   |> App.middleware (Middleware.static_unix ~local_path:"./static" ~uri_prefix:"/static" ())
+  |> App.get "/"                 (fun _ -> respond_with_known_html (Core.Filename.of_parts ["static"; "new_room.html"]))
+  |> App.get "/rooms/:room_name" (fun _ -> respond_with_known_html (Core.Filename.of_parts ["static"; "game.html"]))
   |> App.post "/rooms/:room_name/peers" new_peer_name
   |> App.get "/rooms/:room_name/peers" list_peers
   |> App.post "/rooms/:room_name/peers/:peer_name/offers/:offering_peer_name" new_peer_offer

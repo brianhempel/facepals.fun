@@ -1,0 +1,46 @@
+<html>
+  <head>
+    <title>Face Pals</title>
+  </head>
+  <body>
+    <h1>Face Pals</h1>
+    <p>Name your game room:</p>
+    <p><form id="new_room_form"><input id="room_name" type="text" /><button>Let's go!</button></form></p>
+    <script>
+      colors     = ["white", "yellow", "blue", "red", "green", "black", "brown", "azure", "ivory", "teal", "silver", "purple", "gray", "orange", "maroon", "aquamarine", "fuchsia", "lime", "crimson", "khaki", "pink", "magenta", "olive", "cyan"]; // https://7esl.com/colour-vocabulary/
+      adjectives = ["adorable", "beautiful", "clean", "drab", "elegant", "fancy", "glamorous", "handsome", "long", "magnificent", "old-fashioned", "plain", "quaint", "sparkling", "unsightly", "wide-eyed", "alive", "better", "careful", "clever", "dead", "easy", "famous", "gifted", "helpful", "important", "inexpensive", "mushy", "odd", "powerful", "rich", "shy", "tender", "vast", "angry", "clumsy", "defeated", "embarrassed", "fierce", "grumpy", "helpless", "jealous", "lazy", "mysterious", "nervous", "panicky", "repulsive", "scary", "thoughtless", "uptight", "worried", "agreeable", "brave", "calm", "delightful", "eager", "faithful", "gentle", "happy", "jolly", "kind", "lively", "nice", "obedient", "proud", "relieved", "silly", "thankful", "victorious", "zealous", "broad", "chubby", "crooked", "curved", "deep", "high", "low", "narrow", "skinny", "round", "shallow", "skinny", "square", "straight", "wide", "big", "colossal", "fat", "gigantic", "great", "huge", "immense", "large", "little", "mammoth", "massive", "puny", "scrawny", "short", "small", "tall", "teeny", "teeny-tiny", "tiny", "deafening", "faint", "hissing", "loud", "melodic", "noisy", "purring", "quiet", "raspy", "screeching", "thundering", "voiceless", "whispering", "bitter", "delicious", "fresh", "greasy", "juicy", "hot", "icy", "loose", "nutritious", "prickly", "rainy", "rotten", "salty", "sticky", "strong", "sweet", "tasteless", "weak", "wet", "wooden", "yummy", "bumpy", "chilly", "cold", "cool", "creepy", "crooked", "cuddly", "curly", "damaged", "damp", "dirty", "dusty", "freezing", "hot", "warm"]; // https://www.eslbuzz.com/top-200-adjectives-used-in-english-vocabulary-for-speaking/
+      nouns      = ["angle", "ant", "apple", "arch", "arm", "army", "baby", "bag", "ball", "band", "basin", "basket", "bath", "bed", "bee", "bell", "berry", "bird", "blade", "board", "boat", "bone", "book", "boot", "bottle", "box", "boy", "brain", "brake", "branch", "brick", "bridge", "brush", "bucket", "bulb", "button", "cake", "camera", "card", "carriage", "cart", "cat", "chain", "cheese", "chess", "chin", "church", "circle", "clock", "cloud", "coat", "collar", "comb", "cord", "cow", "cup", "curtain", "cushion", "dog", "door", "drain", "drawer", "dress", "drop", "ear", "egg", "engine", "eye", "face", "farm", "feather", "finger", "fish", "flag", "floor", "fly", "foot", "fork", "fowl", "frame", "garden", "girl", "glove", "goat", "gun", "hair", "hammer", "hand", "hat", "head", "heart", "hook", "horn", "horse", "hospital", "house", "island", "jewel", "kettle", "key", "knee", "knife", "knot", "leaf", "leg", "library", "line", "lip", "lock", "map", "match", "monkey", "moon", "mouth", "muscle", "nail", "neck", "needle", "nerve", "net", "nose", "nut", "office", "orange", "oven", "parcel", "pen", "pencil", "picture", "pig", "pin", "pipe", "plane", "plate", "plough", "pocket", "pot", "potato", "prison", "pump", "rail", "rat", "receipt", "ring", "rod", "roof", "root", "sail", "school", "scissors", "screw", "seed", "sheep", "shelf", "ship", "shirt", "shoe", "skin", "skirt", "snake", "sock", "spade", "sponge", "spoon", "spring", "square", "stamp", "star", "station", "stem", "stick", "stocking", "stomach", "store", "street", "sun", "table", "tail", "thread", "throat", "thumb", "ticket", "toe", "tongue", "tooth", "town", "train", "tray", "tree", "trousers", "umbrella", "wall", "watch", "wheel", "whip", "whistle", "window", "wing", "wire", "worm"]; // https://www.thoughtco.com/learn-the-most-important-english-nouns-4087688
+      document.addEventListener('DOMContentLoaded', () => {
+        let name_input    = document.getElementById("room_name");
+        let new_room_form = document.getElementById("new_room_form");
+        Array.prototype.pick = function () {
+          return this[Math.floor(Math.random() * this.length)];
+        }
+        function find_unused_room_name() {
+          var room_name = [adjectives.pick(), adjectives.pick(), colors.pick(), nouns.pick()].join("-");
+          fetch("/rooms/" + room_name + "/peers")
+          .then(resp => resp.ok ? resp.json() :  Promise.reject(resp))
+          .then(data => {
+            if (data.peers.length === 0) {
+              name_input.value = room_name;
+              name_input.focus();
+              name_input.select();
+            } else {
+              find_unused_room_name();
+            }
+          })
+          .catch(err => {
+            console.log("Error querying room peers", err);
+            window.setTimeout(find_unused_room_name, 1000);
+          });
+        }
+        find_unused_room_name()
+        document.getElementById('new_room_form').addEventListener('submit', (event) => {
+          room_name = name_input.value.toLowerCase().replace(/[^A-Za-z0-9'!_\-]+/g, "-");
+          window.location.href = "/rooms/" + room_name;
+          event.preventDefault();
+        });
+      });
+    </script>
+  </body>
+</html>

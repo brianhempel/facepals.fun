@@ -11,7 +11,7 @@ var targetFaceCX, targetFaceCY, targetFaceSize;
 var myVidStream;
 var myFaceStream    = myFaceCanvas.captureStream(30);
 var myPeerName;
-var roomName        = "room1";
+var roomName        = window.location.href.match(/\/rooms\/([A-Za-z0-9'_!\-]+)/)[1];
 var peers           = {};
 
 const peerConnConfig = {
