@@ -47,4 +47,27 @@ setup_server:
 	sudo systemctl daemon-reload
 	sudo service coturn restart
 
+	# Need swap space to build OCaml
+	# https://linuxize.com/post/how-to-add-swap-space-on-ubuntu-20-04/
+	sudo fallocate -l 2G /swapfile
+	sudo chmod 600 /swapfile
+	sudo mkswap /swapfile
+	sudo swapon /swapfile
+	sudo sh -c "echo '/swapfile swap swap defaults 0 0' >> /etc/fstab"
+
+	sudo apt install opam
+	opam init
+	opam switch create 4.11.1
+	eval $(opam env)
+	sudo apt install libev-dev pkg-config
+	opam install ocamlfind opium core
+	cd facepals.fun && make
+
+	sudo apt install haproxy
+	sudo sh -c "cat /etc/letsencrypt/live/facepals.fun/fullchain.pem /etc/letsencrypt/live/facepals.fun/privkey.pem > /etc/ssl/private/facepals.fun.pem"
+	sudo cp haproxy.cfg /etc/haproxy/haproxy.cfg
+	sudo service haproxy restart
+
+
+
 
