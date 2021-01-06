@@ -1,8 +1,9 @@
 
-
+let gameW = 1366
+let gameH = 768
 let canvas = document.getElementById('gameCanvas');
 let ctx    = canvas.getContext('2d');
-let me     = {x : 500, y : 350, vx : 0, vy : 0}
+let me     = {x : gameW / 2, y : gameH / 2, vx : 0, vy : 0}
 let gameState = { objects: { me: me } };
 var lastUpdate = {};
 let keysDown = [];
@@ -13,6 +14,9 @@ let renderFPS  = gameFPS;
 let networkFPS = 20;
 
 let usedKeys = ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "a", "s", "d", "w"];
+
+canvas.width  = gameW;
+canvas.height = gameH;
 
 Array.prototype.addAsSet = function(elem) {
   if (!this.includes(elem)) {
@@ -125,3 +129,8 @@ window.setTimeout(broadcastStep, 100);
 
 document.addEventListener("keydown", event => { keysDown.addAsSet(event.key);    if (usedKeys.includes(event.key)) { event.preventDefault() } });
 document.addEventListener("keyup",   event => { keysDown.removeAsSet(event.key); if (usedKeys.includes(event.key)) { event.preventDefault() } });
+
+document.getElementById("fullscreenButton").addEventListener("click", () => {
+  canvas.requestFullscreen();
+});
+

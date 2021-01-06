@@ -1,0 +1,42 @@
+body {
+  margin: 0.1em auto;
+  width: 1368px;
+  background: #659dbd;
+  font-family: 'Impact', Verdana, Geneva, Tahoma, sans-serif;
+  color: white;
+  font-size: 30px;
+}
+
+h1, p {
+  text-align: center;
+  margin: 0.2em 0;
+}
+
+form {
+  text-align: center;
+  position: relative;
+  width: 50%;
+  margin: 0 auto;
+}
+
+input[type=text], button {
+  font-family: 'Impact', Verdana, Geneva, Tahoma, sans-serif;
+  font-size: 24px;
+  text-align: center;
+  padding: 0.2em;
+}
+
+button {
+  background-color: bisque;
+}
+
+form input,
+form button {
+  width: 100%;
+}
+
+
+canvas {
+  background-color: black;
+  border: 1px solid black;
+}

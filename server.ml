@@ -147,7 +147,6 @@ let get_ice_candidate req =
          /rooms/ROOM_NAME/peers/OTHER_PEER_NAME/answers/MY_PEER_NAME
  *)
 
- (* START HERE: need to terminate SSL *)
 let _ =
   Random.self_init ();
   Logs.set_reporter (Logs_fmt.reporter ());

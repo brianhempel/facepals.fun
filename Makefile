@@ -5,8 +5,10 @@ clean:
 	rm server.o server.cmx server.cmi
 
 dev_setup:
-	brew install coturn
-	opam switch 4.11.1
+	# brew install coturn
+	sh <(curl -sL https://raw.githubusercontent.com/ocaml/opam/master/shell/install.sh)
+	opam switch create 4.11.1
+	eval $(opam env)
 	# opam install dune
 	opam install opium core
 
@@ -65,7 +67,7 @@ setup_server:
 
 	sudo apt install haproxy
 	sudo sh -c "cat /etc/letsencrypt/live/facepals.fun/fullchain.pem /etc/letsencrypt/live/facepals.fun/privkey.pem > /etc/ssl/private/facepals.fun.pem"
-	sudo cp haproxy.cfg /etc/haproxy/haproxy.cfg
+	sudo cp facepals.fun/haproxy.cfg /etc/haproxy/haproxy.cfg
 	sudo service haproxy restart
 
 

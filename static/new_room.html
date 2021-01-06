@@ -1,11 +1,15 @@
 <html>
   <head>
     <title>Face Pals</title>
+    <link href="/static/styles.css" rel="stylesheet"/>
   </head>
   <body>
     <h1>Face Pals</h1>
-    <p>Name your game room:</p>
-    <p><form id="new_room_form"><input id="room_name" type="text" /><button>Let's go!</button></form></p>
+    <form id="new_room_form">
+      <p>Name your game room:</p>
+      <p><input id="room_name" type="text" /></p>
+      <p><button>Let's go!</button></p>
+    </form>
     <script>
       colors     = ["white", "yellow", "blue", "red", "green", "black", "brown", "azure", "ivory", "teal", "silver", "purple", "gray", "orange", "maroon", "aquamarine", "fuchsia", "lime", "crimson", "khaki", "pink", "magenta", "olive", "cyan"]; // https://7esl.com/colour-vocabulary/
       adjectives = ["adorable", "beautiful", "clean", "drab", "elegant", "fancy", "glamorous", "handsome", "long", "magnificent", "old-fashioned", "plain", "quaint", "sparkling", "unsightly", "wide-eyed", "alive", "better", "careful", "clever", "dead", "easy", "famous", "gifted", "helpful", "important", "inexpensive", "mushy", "odd", "powerful", "rich", "shy", "tender", "vast", "angry", "clumsy", "defeated", "embarrassed", "fierce", "grumpy", "helpless", "jealous", "lazy", "mysterious", "nervous", "panicky", "repulsive", "scary", "thoughtless", "uptight", "worried", "agreeable", "brave", "calm", "delightful", "eager", "faithful", "gentle", "happy", "jolly", "kind", "lively", "nice", "obedient", "proud", "relieved", "silly", "thankful", "victorious", "zealous", "broad", "chubby", "crooked", "curved", "deep", "high", "low", "narrow", "skinny", "round", "shallow", "skinny", "square", "straight", "wide", "big", "colossal", "fat", "gigantic", "great", "huge", "immense", "large", "little", "mammoth", "massive", "puny", "scrawny", "short", "small", "tall", "teeny", "teeny-tiny", "tiny", "deafening", "faint", "hissing", "loud", "melodic", "noisy", "purring", "quiet", "raspy", "screeching", "thundering", "voiceless", "whispering", "bitter", "delicious", "fresh", "greasy", "juicy", "hot", "icy", "loose", "nutritious", "prickly", "rainy", "rotten", "salty", "sticky", "strong", "sweet", "tasteless", "weak", "wet", "wooden", "yummy", "bumpy", "chilly", "cold", "cool", "creepy", "crooked", "cuddly", "curly", "damaged", "damp", "dirty", "dusty", "freezing", "hot", "warm"]; // https://www.eslbuzz.com/top-200-adjectives-used-in-english-vocabulary-for-speaking/
