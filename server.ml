@@ -125,6 +125,12 @@ let get_ice_candidate req =
   let ice_candidate_id = Router.param req "ice_candidate_id" in
   respond_with_json_file @@ Core.Filename.of_parts ["rooms"; room_name; "peers"; target_peer_name; "ice_candidates"; sending_peer_name; ice_candidate_id]
 
+
+(* Change to none during dev, but don't commit. *)
+let static_etag_opt =
+  (* None *)
+  Some (Stdio.In_channel.read_all ".git/refs/heads/main" |> String.trim)
+
 (*
   The protocol is to:
 
@@ -150,9 +156,11 @@ let get_ice_candidate req =
 let _ =
   Random.self_init ();
   Logs.set_reporter (Logs_fmt.reporter ());
-  Logs.set_level (Some Logs.Debug);
+  (* Logs.set_level (Some Logs.Debug); *)
+  Logs.set_level (Some Logs.Info);
   App.empty
-  |> App.middleware (Middleware.static_unix ~local_path:"./static" ~uri_prefix:"/static" ())
+  |> App.middleware (Middleware.logger)
+  |> App.middleware (Middleware.static_unix ~local_path:"./static" ~uri_prefix:"/static" ~etag_of_fname:(fun _ -> static_etag_opt) ())
   |> App.get "/"                 (fun _ -> respond_with_known_html (Core.Filename.of_parts ["static"; "new_room.html"]))
   |> App.get "/rooms/:room_name" (fun _ -> respond_with_known_html (Core.Filename.of_parts ["static"; "game.html"]))
   |> App.post "/rooms/:room_name/peers" new_peer_name
