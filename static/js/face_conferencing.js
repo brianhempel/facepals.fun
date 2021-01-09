@@ -46,8 +46,9 @@ Array.prototype.maxBy = function(f) {
 faceapi.nets.tinyFaceDetector.loadFromUri('/static/models');
 
 function faceDetect() {
-  var detectStart = new Date();
-  faceapi.detectSingleFace(myVid, new faceapi.TinyFaceDetectorOptions({ inputSize: 288 }))
+  if (faceapi.nets.tinyFaceDetector.isLoaded) {
+    var detectStart = new Date();
+    faceapi.detectSingleFace(myVid, new faceapi.TinyFaceDetectorOptions({ inputSize: 288 }))
     .then(detection => {
       if (detection) {
         // console.log(detection);
@@ -60,7 +61,13 @@ function faceDetect() {
       // console.log(detectDuration);
       // Target no more than 33% processing time spent on face detection.
       window.setTimeout(faceDetect, Math.max(detectDuration*2, 33));
+    }).catch(err => {
+      console.warn("Face detection error", err);
+      window.setTimeout(faceDetect, 2000);
     });
+  } else {
+    window.setTimeout(faceDetect, 200);
+  }
 }
 
 // The protocol is to:
