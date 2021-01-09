@@ -60,7 +60,7 @@ function faceDetect() {
       detectDuration = new Date() - detectStart;
       // console.log(detectDuration);
       // Target no more than 33% processing time spent on face detection.
-      window.setTimeout(faceDetect, Math.max(detectDuration*2, 33));
+      window.setTimeout(faceDetect, Math.max(detectDuration*4, 33));
     }).catch(err => {
       console.warn("Face detection error", err);
       window.setTimeout(faceDetect, 2000);
