@@ -116,18 +116,22 @@ function pollForAnswerFrom(peerName) {
 }
 
 function makeOnIceCandidateHandler(peerName) {
+  let sendIceCandidate = candidateJson => {
+    console.log(candidateJson);
+    fetch('/rooms/' + roomName + '/peers/' + peerName + '/ice_candidates/' + myPeerName, {
+      method: 'POST',
+      body: JSON.stringify(candidateJson),
+      headers: { 'Content-Type': 'application/json' }
+    })
+    .then(resp => resp.ok ? resp :  Promise.reject(resp))
+    .catch(err => {
+      console.warn('Error sending ICE candidate to ' + peerName, err);
+      window.setTimeout(() => sendIceCandidate(candidateJson), 500);
+    });
+  };
   return function (event) {
     if (event.candidate) {
-      console.log(event.candidate.toJSON());
-      fetch('/rooms/' + roomName + '/peers/' + peerName + '/ice_candidates/' + myPeerName, {
-        method: 'POST',
-        body: JSON.stringify(event.candidate.toJSON()),
-        headers: { 'Content-Type': 'application/json' }
-      })
-      .then(resp => resp.ok ? resp :  Promise.reject(resp))
-      .catch(err => {
-        console.warn('Error sending ICE candidate to ' + peerName, err)
-      });
+      sendIceCandidate(event.candidate.toJSON());
     }
   };
 }
