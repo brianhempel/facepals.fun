@@ -13,7 +13,7 @@ dev_setup:
 	opam install opium core
 
 run: server
-	./server
+	ulimit -S -n $(ulimit -Hn); ./server
 
 setup_server:
 	# https://www.digitalocean.com/community/tutorials/initial-server-setup-with-ubuntu-20-04
