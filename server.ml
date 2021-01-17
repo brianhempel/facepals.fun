@@ -6,6 +6,22 @@ let ensure_dir path =
   if not path_exists then Core.Unix.mkdir_p path;
   Lwt.return ()
 
+let with_dir path f =
+  let open Lwt.Syntax in
+  let* dir_handle = Lwt_unix.opendir path in
+  Lwt.finalize
+    (fun () -> f dir_handle)
+    (fun () -> Lwt_unix.closedir dir_handle)
+
+let names_in_dir path =
+  let open Lwt.Syntax in
+  with_dir path @@ fun dir_handle ->
+    let* entries_array = Lwt_unix.readdir_n dir_handle 100_000 in
+    entries_array
+    |> Array.to_list
+    |> List.filter (fun entry -> entry.[0] != '.')
+    |> Lwt.return
+
 let req_body_to_file req path =
   let open Lwt.Syntax in
   let dir_path = Core.Filename.dirname path in
@@ -58,12 +74,7 @@ let list_peers req =
   let* path_exists = Lwt_unix.file_exists peers_dir_path in
   let* peer_names =
     if path_exists then
-      let* dir_handle    = Lwt_unix.opendir peers_dir_path in
-      let* entries_array = Lwt_unix.readdir_n dir_handle 100_000 in
-      entries_array
-      |> Array.to_list
-      |> List.filter (fun entry -> entry.[0] != '.')
-      |> Lwt.return
+      names_in_dir peers_dir_path
     else
       Lwt.return []
   in
@@ -112,9 +123,8 @@ let list_ice_candidate_ids req =
   let sending_peer_name = Router.param req "sending_peer_name" in
   let candidates_dir_path = Core.Filename.of_parts ["rooms"; room_name; "peers"; target_peer_name; "ice_candidates"; sending_peer_name] in
   let open Lwt.Syntax in
-  let* dir_handle = Lwt_unix.opendir candidates_dir_path in
-  let* entries_array = Lwt_unix.readdir_n dir_handle 100_000 in
-  let ice_candidate_ids = entries_array |> Array.to_list |> List.filter (fun entry -> entry.[0] != '.') |> List.sort (fun name1 name2 -> Float.compare (float_of_string name1) (float_of_string name2)) in
+  let* ice_candidate_ids = names_in_dir candidates_dir_path in
+  let ice_candidate_ids = ice_candidate_ids |> List.sort (fun name1 name2 -> Float.compare (float_of_string name1) (float_of_string name2)) in
   Response.of_json (`Assoc [ "ice_candidate_ids", `List (List.map (fun name -> `String name) ice_candidate_ids) ])
   |> Lwt.return
 
