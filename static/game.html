@@ -5,13 +5,20 @@
   </head>
   <body>
     <h1>Face Pals</h1>
-    <canvas id="gameCanvas"></canvas>
+    <!-- <canvas id="gameCanvas"></canvas> -->
+    <div id="gameDiv" style="position: relative;">
+      <canvas id="myFaceCanvas" style="position: absolute"></canvas>
+    </div>
     <div id="buttons"><button id="fullscreenButton">Fullscreen </button></div>
-    <video id="myVid" muted style="display: none"></video>
-    <canvas id="myFaceCanvas" style="display: none"></canvas>
-    <div id="peers" style="display: none"></div>
+    <div style="display: none">
+      <video id="myVid" muted></video>
+      <div id="peers"></div>
+    </div>
+    <!-- <script src="/static/js/phaser.js"></script> -->
+    <!-- <script src="/static/js/pixi.js"></script> -->
     <script src="/static/js/adapter.js"></script>
-    <script src="/static/js/face-api.js"></script>
+    <!-- <script src="/static/js/face-api.js"></script> -->
+    <script src="/static/js/opencv.js"></script>
     <script src="/static/js/face_conferencing.js"></script>
     <script src="/static/js/game.js"></script>
   </body>

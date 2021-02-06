@@ -1,9 +1,10 @@
 let myVid           = document.getElementById('myVid');
 let myFaceCanvas    = document.getElementById('myFaceCanvas');
 let peersDiv        = document.getElementById('peers');
-let miniFaceSize    = 96;
+let miniFaceSize    = 64;
 myFaceCanvas.width  = miniFaceSize;
 myFaceCanvas.height = miniFaceSize;
+myFaceCanvas.style.borderRadius = "" + (miniFaceSize / 2) + "px";
 var myWidth, myHeight;
 var facefinder;
 var faceCX, faceCY, faceSize;
@@ -13,6 +14,14 @@ var myFaceStream    = myFaceCanvas.captureStream(30);
 var myPeerName;
 var roomName        = window.location.href.match(/\/rooms\/([A-Za-z0-9'_!\-]+)/)[1];
 var peers           = {};
+
+// baseline idle 73.8
+// no showing vid / face canvase 77.1
+// no face detection 78.4
+// and no circular clipping 79.5
+// and no drawing on game canvas 91.3
+// and no drawing on face canvas 93.1
+// add back drawing on face canvas and face detection 89.9
 
 const peerConnConfig = {
   iceServers: [
@@ -43,32 +52,6 @@ Array.prototype.maxBy = function(f) {
   return best_elem;
 };
 
-faceapi.nets.tinyFaceDetector.loadFromUri('/static/models');
-
-function faceDetect() {
-  if (faceapi.nets.tinyFaceDetector.isLoaded) {
-    var detectStart = new Date();
-    faceapi.detectSingleFace(myVid, new faceapi.TinyFaceDetectorOptions({ inputSize: 288 }))
-    .then(detection => {
-      if (detection) {
-        // console.log(detection);
-        let box = detection.box;
-        targetFaceCX   = (box.right + box.left) / 2;
-        targetFaceCY   = (box.bottom + box.top) / 2;
-        targetFaceSize = Math.max(box.width, box.height);
-      }
-      detectDuration = new Date() - detectStart;
-      // console.log(detectDuration);
-      // Target no more than 33% processing time spent on face detection.
-      window.setTimeout(faceDetect, Math.max(detectDuration*4, 33));
-    }).catch(err => {
-      console.warn("Face detection error", err);
-      window.setTimeout(faceDetect, 2000);
-    });
-  } else {
-    window.setTimeout(faceDetect, 200);
-  }
-}
 
 // The protocol is to:
 
@@ -325,44 +308,116 @@ function pollForPeers() {
   });
 }
 
-myVid.addEventListener('playing', () => {
-  let myFaceCtx = myFaceCanvas.getContext('2d');
 
-  function onFrame() {
-    // myCtx.drawImage(myVid, 0, 0);
+cvSrc = null;
+cvCap = null;
+gray = null;
+faces = null;
+classifier = null;
+resp = null;
+cascadeFetched = false;
 
-    minDim = Math.min(myWidth, myHeight)
+fetch('/static/haarcascade_frontalface_default.xml')
+  .then(resp => resp.ok ? resp.arrayBuffer() :  Promise.reject(resp))
+  .then(buff => {
+    // console.log(data);
+    cv.FS_createDataFile('/', 'haarcascade_frontalface_default.xml', new Uint8Array(buff), true, false, false);
+    cascadeFetched = true;
+  }).catch(err => {
+    console.warn("Couldn't load haar cascade for face detector", err);
+  });
 
-    dist = ((targetFaceCX - faceCX)**2 + (targetFaceCY - faceCY)**2 + (targetFaceSize - faceSize)**2)**0.5 / faceSize
-    push = Math.min(dist*2.5, 1.0);
-    faceCX   = (1.0 - push)*faceCX + push*targetFaceCX;
-    faceCY   = (1.0 - push)*faceCY + push*targetFaceCY;
-    faceSize = (1.0 - push)*faceSize + push*targetFaceSize;
-
-    myFaceCtx.drawImage(myVid, faceCX - faceSize/2, faceCY - faceSize/2, faceSize, faceSize, 0, 0, miniFaceSize, miniFaceSize);
-
-    requestAnimationFrame(onFrame);
+function faceDetect() {
+  if (!cascadeFetched) {
+    window.setTimeout(faceDetect, 100);
+    return;
   }
 
-  requestAnimationFrame(onFrame);
-  faceDetect();
-  acquirePeerName();
+  if (!cvCap) {
+    cvSrc = new cv.Mat(myVid.height, myVid.width, cv.CV_8UC4);
+    cvCap = new cv.VideoCapture(myVid);
+    gray  = new cv.Mat();
+    faces = new cv.RectVector();
+    classifier = new cv.CascadeClassifier();
+    classifier.load('haarcascade_frontalface_default.xml');
+  }
+
+  let detectStart = new Date();
+  try {
+    cvCap.read(cvSrc);
+    cv.cvtColor(cvSrc, gray, cv.COLOR_RGBA2GRAY, 0);
+    let maxSize  = Math.min(cvSrc.rows, cvSrc.cols);
+    let minSize = Math.ceil(maxSize / 4);
+    classifier.detectMultiScale(gray, faces, 1.1, 3, 0, new cv.Size(minSize, minSize));
+    // classifier.detectMultiScale(gray, faces, 1.05, 3, 0);
+    // console.log(faces);
+    var biggestFaceArea = 0;
+    for (let i = 0; i < faces.size(); ++i) {
+        let face = faces.get(i);
+        // console.log(face)
+        let area = face.width * face.height;
+        if (area > biggestFaceArea) {
+          targetFaceCX    = face.x + face.width / 2;
+          targetFaceCY    = face.y + face.height / 2;
+          targetFaceSize  = Math.max(face.width, face.height);
+          biggestFaceArea = area;
+        }
+    }
+    let detectDuration = new Date() - detectStart;
+    // console.log(detectDuration);
+    setTimeout(faceDetect, 0.2*1000);
+  } catch (err) {
+    console.log(err);
+    console.log(cv.exceptionFromPtr(err).msg);
+    setTimeout(faceDetect, 5000);
+  }
+}
+
+
+window.addEventListener('DOMContentLoaded', (event) => {
+  myVid.addEventListener('playing', () => {
+    let myFaceCtx = myFaceCanvas.getContext('2d');
+
+    function drawFace() {
+      // myCtx.drawImage(myVid, 0, 0);
+
+      minDim = Math.min(myWidth, myHeight)
+
+      dist = ((targetFaceCX - faceCX)**2 + (targetFaceCY - faceCY)**2 + (targetFaceSize - faceSize)**2)**0.5 / faceSize
+      push = Math.min(dist, 1.0);
+      faceCX   = (1.0 - push)*faceCX + push*targetFaceCX;
+      faceCY   = (1.0 - push)*faceCY + push*targetFaceCY;
+      faceSize = (1.0 - push)*faceSize + push*targetFaceSize;
+
+      myFaceCtx.drawImage(myVid, faceCX - faceSize/2, faceCY - faceSize/2, faceSize, faceSize, 0, 0, miniFaceSize, miniFaceSize);
+
+      // window.setTimeout(drawFace, 1000 / 60);
+      window.setTimeout(drawFace, 1000 / 40);
+    }
+
+    window.setTimeout(drawFace, 100);
+    window.setTimeout(faceDetect, 500);
+    acquirePeerName();
+  });
+
+  navigator.mediaDevices
+    .getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: 1 }, video: { width: 384, height: 288 } })
+    .then(stream => {
+      myVidStream     = stream;
+      myWidth         = stream.getVideoTracks()[0].getSettings().width;
+      myHeight        = stream.getVideoTracks()[0].getSettings().height;
+      myVid.width     = myWidth;
+      myVid.height    = myHeight;
+      myVid.srcObject = stream;
+      faceCX          = myWidth / 2;
+      faceCY          = myHeight / 2;
+      faceSize        = Math.min(myWidth, myHeight);
+      targetFaceCX    = faceCX;
+      targetFaceCY    = faceCY;
+      targetFaceSize  = faceSize;
+      console.log(stream.getVideoTracks()[0].getSettings())
+      console.log(stream.getAudioTracks()[0].getSettings())
+      myVid.play();
+    }).catch(e => console.log('getUserMedia: ', e));
 });
 
-navigator.mediaDevices
-  .getUserMedia({ audio: true, video: { width: 384, height: 288 } })
-  .then(stream => {
-    myVidStream     = stream;
-    myWidth         = stream.getVideoTracks()[0].getSettings().width;
-    myHeight        = stream.getVideoTracks()[0].getSettings().height;
-    myVid.width     = myWidth;
-    myVid.height    = myHeight;
-    myVid.srcObject = stream;
-    faceCX          = myWidth / 2;
-    faceCY          = myHeight / 2;
-    faceSize        = Math.min(myWidth, myHeight);
-    targetFaceCX    = faceCX;
-    targetFaceCY    = faceCY;
-    targetFaceSize  = faceSize;
-    myVid.play();
-  }).catch(e => console.log('getUserMedia: ', e));
