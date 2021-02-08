@@ -10,7 +10,7 @@ gameDiv.style.backgroundImage = "url(/static/field.jpg)";
 let defaultConstants = {
   playerInertiaIdle : 0.25,
   playerInertiaMoving : 0.00005,
-  playerAccelMoving : 7000,
+  playerAccelMoving : 5000,
   ballInertia : 0.5,
   wallSpringConstant: 100,
   objectSpringConstant: 200,
