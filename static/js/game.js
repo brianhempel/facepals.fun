@@ -1,16 +1,59 @@
 
-let gameW        = 16*80
-let gameH        = 9*80
-let gameDiv      = document.getElementById('gameDiv');
-gameDiv.style.width    = gameW;
-gameDiv.style.height   = gameH;
-let me           = {x : gameW / 2, y : gameH / 2, vx : 0, vy : 0};
-let gameState    = { objects: { me: me } };
-var lastUpdate   = {};
-let keysDown     = [];
-let lastGameTime = new Date();
+let gameW                     = 16*80
+let gameH                     = 9*80
+let gameDiv                   = document.getElementById('gameDiv');
+gameDiv.style.width           = gameW;
+gameDiv.style.height          = gameH;
+gameDiv.style.backgroundImage = "url(/static/field.jpg)";
 
-let networkFPS = 20;
+
+let defaultConstants = {
+  playerInertiaIdle : 0.25,
+  playerInertiaMoving : 0.00005,
+  playerAccelMoving : 7000,
+  ballInertia : 0.5,
+  wallSpringConstant: 100,
+  objectSpringConstant: 200,
+  networkFPS : 20
+}
+
+let me                  = {x : Math.random() * gameW, y : -50, vx : 0, vy : 0, inertia : 0.25, radius : miniFaceSize / 2, mass : 1};
+let ballElem            = document.createElement('img');
+ballElem.src            = "/static/ball.png"
+let ball                = {x : gameW / 2, y : gameH / 2, vx : 0, vy : 0, inertia : 0.5, radius : miniFaceSize / 4, mass : 0.25};
+ballElem.width          = 2 * ball.radius;
+ballElem.height         = 2 * ball.radius;
+ballElem.style.position = "absolute";
+gameDiv.appendChild(ballElem);
+
+function makePoll(x, y) {
+  let poll                       = {x : x, y : y, vx : 0, vy : 0, inertia : 0, radius : miniFaceSize / 8, mass : 1000000};
+  let pollElem                   = document.createElement('div');
+  pollElem.style.width           = 2 * poll.radius;
+  pollElem.style.height          = 2 * poll.radius;
+  pollElem.style.position        = "absolute";
+  pollElem.style.backgroundColor = "white";
+  pollElem.style.borderRadius    = "" + poll.radius + "px";
+  pollElem.style.left            = x - poll.radius / 2;
+  pollElem.style.top             = y - poll.radius / 2;
+  gameDiv.appendChild(pollElem);
+  return poll;
+}
+
+let gameState = {
+  objects: {
+    me: me,
+    ball: ball,
+    poll1: makePoll( 45,         gameH/2 - 80),
+    poll2: makePoll( 45,         gameH/2 + 80),
+    poll3: makePoll( gameW - 45, gameH/2 - 80),
+    poll4: makePoll( gameW - 45, gameH/2 + 80),
+  },
+  constants : defaultConstants
+};
+let objectKeysToUpdate  = [];
+let keysDown            = [];
+let lastGameTime        = new Date();
 
 let usedKeys = ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "a", "s", "d", "w"];
 
@@ -31,6 +74,11 @@ Array.prototype.removeAsSet = function(elem) {
     }
   }
   // console.log(this);
+  return this;
+};
+
+Array.prototype.clear = function() {
+  this.splice(0, this.length);
   return this;
 };
 
@@ -73,21 +121,78 @@ function gameStep() {
   if (keysDown.includes("ArrowUp")    || keysDown.includes("w")) { intendedVy -= 1 };
 
   let intendedHeading = atan2(intendedVy, intendedVx);
-  let speed = 300;
+  let acceleration = gameState.constants.playerAccelMoving;
 
   if (intendedVx != 0 || intendedVy != 0) {
-    me.vx = cos(intendedHeading) * speed;
-    me.vy = sin(intendedHeading) * speed;
+    me.vx += cos(intendedHeading) * acceleration * dt;
+    me.vy += sin(intendedHeading) * acceleration * dt;
+    me.inertia = gameState.constants.playerInertiaMoving;
   } else {
-    me.vx = 0;
-    me.vy = 0;
+    me.inertia = gameState.constants.playerInertiaIdle;
   }
+  // } else {
+  //   me.vx = 0;
+  //   me.vy = 0;
+  // }
 
   let objects = gameState.objects;
-  for (key in gameState.objects) {
-    object = objects[key];
+  for (key in objects) {
+    let object = objects[key];
     object.x += object.vx * dt;
     object.y += object.vy * dt;
+
+    if (object.x - object.radius < 0) {
+      object.vx += (0 - (object.x - object.radius)) * gameState.constants.wallSpringConstant * dt;
+    }
+    if (object.x + object.radius > gameW) {
+      object.vx -= ((object.x + object.radius) - gameW) * gameState.constants.wallSpringConstant * dt;
+    }
+    if (object.y - object.radius < 0) {
+      object.vy += (0 - (object.y - object.radius)) * gameState.constants.wallSpringConstant * dt;
+    }
+    if (object.y + object.radius > gameH) {
+      object.vy -= ((object.y + object.radius) - gameH) * gameState.constants.wallSpringConstant * dt;
+    }
+  }
+
+  // Circular spring physics. Bouncy, hehe.
+  for (key1 in objects) {
+    for (key2 in objects) {
+      if (key1 < key2) {
+        let obj1 = objects[key1];
+        let obj2 = objects[key2];
+
+        let dx = obj2.x - obj1.x;
+        let dy = obj2.y - obj1.y;
+
+        let radiusSum = obj1.radius + obj2.radius;
+
+        if (dx*dx + dy*dy < radiusSum * radiusSum) {
+          if (key1 === "me" || key2 === "me") {
+            if (key1 === "ball" || key2 === "ball") {
+              objectKeysToUpdate.addAsSet("ball");
+            }
+          }
+
+          let interDistance       = Math.sqrt(dx*dx + dy*dy);
+          let penetrationDistance = radiusSum - interDistance;
+
+          let unitDx = dx / interDistance;
+          let unitDy = dy / interDistance;
+
+          obj1.vx -= penetrationDistance * gameState.constants.objectSpringConstant * unitDx * dt / obj1.mass;
+          obj2.vx += penetrationDistance * gameState.constants.objectSpringConstant * unitDx * dt / obj2.mass;
+          obj1.vy -= penetrationDistance * gameState.constants.objectSpringConstant * unitDy * dt / obj1.mass;
+          obj2.vy += penetrationDistance * gameState.constants.objectSpringConstant * unitDy * dt / obj2.mass;
+        }
+      }
+    }
+  }
+
+  for (key in objects) {
+    let object = objects[key];
+    object.vx *= Math.pow(object.inertia, dt);
+    object.vy *= Math.pow(object.inertia, dt);
   }
 
   lastGameTime = now;
@@ -109,13 +214,31 @@ function handleMessage(peerName, remoteGameState) {
   update(gameState, remoteGameState);
 }
 
+
+var lastGameConstants = JSON.parse(JSON.stringify(gameState.constants));
 function broadcastStep() {
+
   let update = { objects: { me: me } };
-  // if (update !== lastUpdate) {
-    broadcast(update);
-  // }
-  // lastUpdate = update
-  window.setTimeout(broadcastStep, 1000 / networkFPS);
+
+  for (key in gameState.objects) {
+    if (Math.random() < 0.0005) {
+      objectKeysToUpdate.addAsSet(key);
+    }
+  }
+
+  objectKeysToUpdate.forEach(key => {
+    update.objects[key] = gameState.objects[key];
+  });
+  objectKeysToUpdate.clear();
+
+  if (lastGameConstants != gameState.constants || Math.random() < 0.0005) {
+    update.constants = gameState.constants;
+  }
+  lastGameConstants = JSON.parse(JSON.stringify(gameState.constants));
+
+  broadcast(update);
+
+  window.setTimeout(broadcastStep, 1000 / gameState.constants.networkFPS);
 }
 window.setTimeout(broadcastStep, 100);
 
@@ -137,6 +260,9 @@ function tick() {
   }
   myFaceCanvas.style.left = Math.floor(me.x - miniFaceSize / 2);
   myFaceCanvas.style.top  = Math.floor(me.y - miniFaceSize / 2);
+
+  ballElem.style.left = Math.floor(ball.x - ball.radius);
+  ballElem.style.top  = Math.floor(ball.y - ball.radius);
 
   requestAnimationFrame(tick);
 }
