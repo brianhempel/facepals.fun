@@ -1,4 +1,6 @@
 let myVid           = document.getElementById('myVid');
+let myVidCanvas     = document.createElement('canvas');
+var myVidCanvasCtx;
 let myFaceCanvas    = document.getElementById('myFaceCanvas');
 let peersDiv        = document.getElementById('peers');
 let miniFaceSize    = 64;
@@ -6,7 +8,7 @@ myFaceCanvas.width  = miniFaceSize;
 myFaceCanvas.height = miniFaceSize;
 myFaceCanvas.style.borderRadius = "" + (miniFaceSize / 2) + "px";
 var myWidth, myHeight;
-var facefinder;
+var faceDetectionWorker;
 var faceCX, faceCY, faceSize;
 var targetFaceCX, targetFaceCY, targetFaceSize;
 var myVidStream;
@@ -309,69 +311,101 @@ function pollForPeers() {
 }
 
 
-cvSrc = null;
-cvCap = null;
-gray = null;
-faces = null;
-classifier = null;
-resp = null;
-cascadeFetched = false;
+faceDetectionWorker = new Worker("/static/js/face_detection_worker.js");
+faceDetectionWorker.addEventListener("message", ({ data }) => {
+  // console.log(data);
+  if (data.type === "ready") {
+    askForFaceDetection();
+  } else if (data.type === "faceLocation") {
 
-fetch('/static/haarcascade_frontalface_default.xml')
-  .then(resp => resp.ok ? resp.arrayBuffer() :  Promise.reject(resp))
-  .then(buff => {
-    // console.log(data);
-    cv.FS_createDataFile('/', 'haarcascade_frontalface_default.xml', new Uint8Array(buff), true, false, false);
-    cascadeFetched = true;
-  }).catch(err => {
-    console.warn("Couldn't load haar cascade for face detector", err);
-  });
+    targetFaceCX    = data.location.faceCX;
+    targetFaceCY    = data.location.faceCY;
+    targetFaceSize  = data.location.faceSize;
 
-function faceDetect() {
-  if (!cascadeFetched) {
-    window.setTimeout(faceDetect, 100);
-    return;
+    window.setTimeout(askForFaceDetection, 0.2*1000);
+  } else if (data.type === "noFace") {
+    window.setTimeout(askForFaceDetection, 0.2*1000);
+  } else if (data.type === "error") {
+    window.setTimeout(askForFaceDetection, 5*1000);
   }
+});
 
-  if (!cvCap) {
-    cvSrc = new cv.Mat(myVid.height, myVid.width, cv.CV_8UC4);
-    cvCap = new cv.VideoCapture(myVid);
-    gray  = new cv.Mat();
-    faces = new cv.RectVector();
-    classifier = new cv.CascadeClassifier();
-    classifier.load('haarcascade_frontalface_default.xml');
-  }
-
-  let detectStart = new Date();
-  try {
-    cvCap.read(cvSrc);
-    cv.cvtColor(cvSrc, gray, cv.COLOR_RGBA2GRAY, 0);
-    let maxSize  = Math.min(cvSrc.rows, cvSrc.cols);
-    let minSize = Math.ceil(maxSize / 4);
-    classifier.detectMultiScale(gray, faces, 1.1, 3, 0, new cv.Size(minSize, minSize));
-    // classifier.detectMultiScale(gray, faces, 1.05, 3, 0);
-    // console.log(faces);
-    var biggestFaceArea = 0;
-    for (let i = 0; i < faces.size(); ++i) {
-        let face = faces.get(i);
-        // console.log(face)
-        let area = face.width * face.height;
-        if (area > biggestFaceArea) {
-          targetFaceCX    = face.x + face.width / 2;
-          targetFaceCY    = face.y + face.height / 2;
-          targetFaceSize  = Math.max(face.width, face.height);
-          biggestFaceArea = area;
-        }
-    }
-    let detectDuration = new Date() - detectStart;
-    // console.log(detectDuration);
-    setTimeout(faceDetect, 0.2*1000);
-  } catch (err) {
-    console.log(err);
-    console.log(cv.exceptionFromPtr(err).msg);
-    setTimeout(faceDetect, 5000);
+function askForFaceDetection() {
+  if (!myVid.paused) {
+    myVidCanvasCtx.drawImage(myVid, 0, 0, myVidCanvas.width, myVidCanvas.height);
+    faceDetectionWorker.postMessage({
+      type      : 'detect',
+      imageData : myVidCanvasCtx.getImageData(0, 0, myVidCanvas.width, myVidCanvas.height)
+    });
+  } else {
+    window.setTimeout(askForFaceDetection, 0.5*1000);
   }
 }
+
+
+// cvSrc = null;
+// cvCap = null;
+// gray = null;
+// faces = null;
+// classifier = null;
+// resp = null;
+// cascadeFetched = false;
+
+// fetch('/static/haarcascade_frontalface_default.xml')
+//   .then(resp => resp.ok ? resp.arrayBuffer() :  Promise.reject(resp))
+//   .then(buff => {
+//     // console.log(data);
+//     cv.FS_createDataFile('/', 'haarcascade_frontalface_default.xml', new Uint8Array(buff), true, false, false);
+//     cascadeFetched = true;
+//   }).catch(err => {
+//     console.warn("Couldn't load haar cascade for face detector", err);
+//   });
+
+// function faceDetect() {
+//   if (!cascadeFetched) {
+//     window.setTimeout(faceDetect, 100);
+//     return;
+//   }
+
+//   if (!cvCap) {
+//     cvSrc = new cv.Mat(myVid.height, myVid.width, cv.CV_8UC4);
+//     cvCap = new cv.VideoCapture(myVid);
+//     gray  = new cv.Mat();
+//     faces = new cv.RectVector();
+//     classifier = new cv.CascadeClassifier();
+//     classifier.load('haarcascade_frontalface_default.xml');
+//   }
+
+//   let detectStart = new Date();
+//   try {
+//     cvCap.read(cvSrc);
+//     cv.cvtColor(cvSrc, gray, cv.COLOR_RGBA2GRAY, 0);
+//     let maxSize  = Math.min(cvSrc.rows, cvSrc.cols);
+//     let minSize = Math.ceil(maxSize / 4);
+//     classifier.detectMultiScale(gray, faces, 1.1, 3, 0, new cv.Size(minSize, minSize));
+//     // classifier.detectMultiScale(gray, faces, 1.05, 3, 0);
+//     // console.log(faces);
+//     var biggestFaceArea = 0;
+//     for (let i = 0; i < faces.size(); ++i) {
+//         let face = faces.get(i);
+//         // console.log(face)
+//         let area = face.width * face.height;
+//         if (area > biggestFaceArea) {
+//           targetFaceCX    = face.x + face.width / 2;
+//           targetFaceCY    = face.y + face.height / 2;
+//           targetFaceSize  = Math.max(face.width, face.height);
+//           biggestFaceArea = area;
+//         }
+//     }
+//     let detectDuration = new Date() - detectStart;
+//     // console.log(detectDuration);
+//     setTimeout(faceDetect, 0.2*1000);
+//   } catch (err) {
+//     console.log(err);
+//     console.log(cv.exceptionFromPtr(err).msg);
+//     setTimeout(faceDetect, 5000);
+//   }
+// }
 
 
 window.addEventListener('DOMContentLoaded', (event) => {
@@ -384,7 +418,7 @@ window.addEventListener('DOMContentLoaded', (event) => {
       minDim = Math.min(myWidth, myHeight)
 
       dist = ((targetFaceCX - faceCX)**2 + (targetFaceCY - faceCY)**2 + (targetFaceSize - faceSize)**2)**0.5 / faceSize
-      push = Math.min(dist, 1.0);
+      push = Math.min(dist*0.5, 1.0);
       faceCX   = (1.0 - push)*faceCX + push*targetFaceCX;
       faceCY   = (1.0 - push)*faceCY + push*targetFaceCY;
       faceSize = (1.0 - push)*faceSize + push*targetFaceSize;
@@ -396,25 +430,30 @@ window.addEventListener('DOMContentLoaded', (event) => {
     }
 
     window.setTimeout(drawFace, 100);
-    window.setTimeout(faceDetect, 500);
+    // window.setTimeout(faceDetect, 500);
     acquirePeerName();
   });
 
   navigator.mediaDevices
     .getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: 1 }, video: { width: 384, height: 288 } })
     .then(stream => {
-      myVidStream     = stream;
-      myWidth         = stream.getVideoTracks()[0].getSettings().width;
-      myHeight        = stream.getVideoTracks()[0].getSettings().height;
-      myVid.width     = myWidth;
-      myVid.height    = myHeight;
-      myVid.srcObject = stream;
-      faceCX          = myWidth / 2;
-      faceCY          = myHeight / 2;
-      faceSize        = Math.min(myWidth, myHeight);
-      targetFaceCX    = faceCX;
-      targetFaceCY    = faceCY;
-      targetFaceSize  = faceSize;
+      myVidStream               = stream;
+      myWidth                   = stream.getVideoTracks()[0].getSettings().width;
+      myHeight                  = stream.getVideoTracks()[0].getSettings().height;
+      myVid.width               = myWidth;
+      myVid.height              = myHeight;
+      myVid.srcObject           = stream;
+      myVidCanvas.width         = myWidth;
+      myVidCanvas.height        = myHeight;
+      myVidCanvas.style.display = 'none';
+      document.body.appendChild(myVidCanvas);
+      myVidCanvasCtx            = myVidCanvas.getContext('2d');
+      faceCX                    = myWidth / 2;
+      faceCY                    = myHeight / 2;
+      faceSize                  = Math.min(myWidth, myHeight);
+      targetFaceCX              = faceCX;
+      targetFaceCY              = faceCY;
+      targetFaceSize            = faceSize;
       console.log(stream.getVideoTracks()[0].getSettings())
       console.log(stream.getAudioTracks()[0].getSettings())
       myVid.play();
