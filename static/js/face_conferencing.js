@@ -2,7 +2,6 @@ let myVid           = document.getElementById('myVid');
 let myVidCanvas     = document.createElement('canvas');
 var myVidCanvasCtx;
 let myFaceCanvas    = document.getElementById('myFaceCanvas');
-let peersDiv        = document.getElementById('peers');
 let miniFaceSize    = 64;
 myFaceCanvas.width  = miniFaceSize;
 myFaceCanvas.height = miniFaceSize;
@@ -131,12 +130,14 @@ function makeOnIceCandidateHandler(peerName) {
 function makeOnTrackHandler(peerName) {
   return function (event) {
     if (!peers[peerName].vidElem) {
-      let vidElem = document.createElement("video");
-      vidElem.width = miniFaceSize;
-      vidElem.height = miniFaceSize;
-      peersDiv.appendChild(vidElem);
-      peers[peerName].vidElem = vidElem;
-      vidElem.srcObject = event.streams[0];
+      let vidElem                = document.createElement("video");
+      vidElem.width              = miniFaceSize;
+      vidElem.height             = miniFaceSize;
+      document.getElementById('gameDiv').appendChild(vidElem);
+      vidElem.style.borderRadius = "" + (miniFaceSize / 2) + "px";
+      vidElem.style.position     = "absolute";
+      peers[peerName].vidElem    = vidElem;
+      vidElem.srcObject          = event.streams[0];
       vidElem.play();
     }
   };

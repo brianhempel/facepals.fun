@@ -254,8 +254,10 @@ function tick() {
 
   for (peerName in peers) {
     if (peerName in gameState.objects) {
-      peers[peerName].vidElem.style.left = Math.floor(gameState.objects[peerName].x - miniFaceSize / 2);
-      peers[peerName].vidElem.style.top  = Math.floor(gameState.objects[peerName].y - miniFaceSize / 2);
+      if (peers[peerName].vidElem) {
+        peers[peerName].vidElem.style.left = Math.floor(gameState.objects[peerName].x - miniFaceSize / 2);
+        peers[peerName].vidElem.style.top  = Math.floor(gameState.objects[peerName].y - miniFaceSize / 2);
+      }
     }
   }
   myFaceCanvas.style.left = Math.floor(me.x - miniFaceSize / 2);
