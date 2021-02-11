@@ -1,5 +1,7 @@
 open Opium
 
+let global_counter = ref 0
+
 let ensure_dir path =
   let open Lwt.Syntax in
   let* path_exists = Lwt_unix.file_exists path in
@@ -114,7 +116,9 @@ let new_ice_candidate req =
   let target_peer_name = Router.param req "peer_name" in
   let sending_peer_name = Router.param req "sending_peer_name" in
   let open Lwt.Syntax in
-  let* _ = req_body_to_file req (Core.Filename.of_parts ["rooms"; room_name; "peers"; target_peer_name; "ice_candidates"; sending_peer_name; string_of_float (Unix.gettimeofday ()) ]) in
+  let n = !global_counter in
+  incr global_counter;
+  let* _ = req_body_to_file req (Core.Filename.of_parts ["rooms"; room_name; "peers"; target_peer_name; "ice_candidates"; sending_peer_name; string_of_int n ]) in
   Response.make () |> Lwt.return
 
 let list_ice_candidate_ids req =

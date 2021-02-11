@@ -116,7 +116,7 @@ function makeOnIceCandidateHandler(peerName) {
     })
     .then(resp => resp.ok ? resp :  Promise.reject(resp))
     .catch(err => {
-      console.warn('Error sending ICE candidate to ' + peerName, err);
+      console.error('Error sending ICE candidate to ' + peerName, err);
       window.setTimeout(() => sendIceCandidate(candidateJson), 500);
     });
   };
@@ -161,6 +161,17 @@ function broadcast(data) {
   }
 };
 
+function getIceCandidateData(peerName, candidateId) {
+  fetch('/rooms/' + roomName + '/peers/' + myPeerName + '/ice_candidates/' + peerName + '/' + candidateId)
+  .then(resp => resp.ok ? resp.json() :  Promise.reject(resp))
+  .then(data => {
+    peers[peerName].peerConn.addIceCandidate(data);
+  }).catch(err => {
+    console.error("Error getting ice candidate " + candidateId + " from " + peerName, err);
+    window.setTimeout(() => getIceCandidateData(peerName, candidateId, 500));
+  });
+}
+
 function pollForIceCandidates(peerName, delayMs) {
   if (!peers[peerName].iceCandidateIdsProcessed) {
     peers[peerName].iceCandidateIdsProcessed = [];
@@ -172,16 +183,10 @@ function pollForIceCandidates(peerName, delayMs) {
     data.ice_candidate_ids.forEach(candidateId => {
       if (!peers[peerName].iceCandidateIdsProcessed.includes(candidateId)) {
         peers[peerName].iceCandidateIdsProcessed.push(candidateId);
-        fetch('/rooms/' + roomName + '/peers/' + myPeerName + '/ice_candidates/' + peerName + '/' + candidateId)
-        .then(resp => resp.ok ? resp.json() :  Promise.reject(resp))
-        .then(data => {
-          peers[peerName].peerConn.addIceCandidate(data);
-        }).catch(err => {
-          console.log("Error getting for ice candidate " + candidateId + " from " + peerName, err);
-        });
+        getIceCandidateData(peerName, candidateId);
       }
     });
-    window.setTimeout(() => pollForIceCandidates(peerName, delayMs + 500), delayMs)
+    window.setTimeout(() => pollForIceCandidates(peerName, Math.min(delayMs + 500, 5000)), delayMs)
   }).catch(err => {
     window.setTimeout(() => pollForIceCandidates(peerName, delayMs), delayMs)
     console.log("Error polling for ice candidate from " + peerName, err);
