@@ -14,7 +14,7 @@ let defaultConstants = {
   ballInertia : 0.5,
   wallSpringConstant: 100,
   objectSpringConstant: 200,
-  networkFPS : 20
+  networkFPS : 30
 }
 
 let me                  = {x : Math.random() * gameW, y : -50, vx : 0, vy : 0, inertia : 0.25, radius : miniFaceSize / 2, mass : 1};
@@ -218,7 +218,8 @@ function handleMessage(peerName, remoteGameState) {
 var lastGameConstants = JSON.parse(JSON.stringify(gameState.constants));
 function broadcastStep() {
 
-  let update = { objects: { me: me } };
+  // Send self, but with less inertia for better intra-update prediction.
+  let update = { objects: { me: {x : me.x, y : me.y, vx : me.vx, vy : me.vy, inertia : (me.inertia == defaultConstants.playerInertiaMoving ? 1.0 : me.inertia), radius : me.radius, mass : me.mass} } };
 
   for (key in gameState.objects) {
     if (Math.random() < 0.0005) {
