@@ -110,7 +110,7 @@ let atan2 = (y, x) => Math.atan2(y, x) / Math.PI * 180
 
 function gameStep() {
   let now = new Date();
-  let dt = (now - lastGameTime) / 1000;
+  let dt = Math.min((now - lastGameTime) / 1000, 0.1);
 
   var intendedVx = 0;
   var intendedVy = 0;
