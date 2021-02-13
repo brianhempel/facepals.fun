@@ -98,7 +98,7 @@ function pollForAnswerFrom(peerName) {
     console.log('Got answer from ' + peerName);
     peers[peerName].status = 'connected'
     peers[peerName].peerConn.ontrack = makeOnTrackHandler(peerName);
-    window.setTimeout(() => pollForIceCandidates(peerName, 500), 500);
+    window.setTimeout(() => pollForIceCandidates(peerName, 200), 200);
     peers[peerName].peerConn.setRemoteDescription(new RTCSessionDescription(data));
   }).catch(err => {
     console.log('Waiting for answer from ' + peerName, err);
@@ -186,7 +186,7 @@ function pollForIceCandidates(peerName, delayMs) {
         getIceCandidateData(peerName, candidateId);
       }
     });
-    window.setTimeout(() => pollForIceCandidates(peerName, Math.min(delayMs + 500, 5000)), delayMs)
+    window.setTimeout(() => pollForIceCandidates(peerName, Math.min(delayMs + 200, 5000)), delayMs)
   }).catch(err => {
     window.setTimeout(() => pollForIceCandidates(peerName, delayMs), delayMs)
     console.log("Error polling for ice candidate from " + peerName, err);
@@ -214,7 +214,7 @@ function pollForOfferFrom(peerName) {
       peers[peerName].peerConn = peerConn;
     }
     peerConn.ontrack = makeOnTrackHandler(peerName);
-    window.setTimeout(() => pollForIceCandidates(peerName, 500), 500);
+    window.setTimeout(() => pollForIceCandidates(peerName, 200), 200);
     peerConn.setRemoteDescription(new RTCSessionDescription(data));
     peerConn.createAnswer()
     .then(localConnDesc => {
@@ -229,7 +229,7 @@ function pollForOfferFrom(peerName) {
     })
     .then(resp => resp.ok ? resp :  Promise.reject(resp))
     .catch(err => {
-        console.warn('Error responding to offer', err)
+        console.error('Error responding to offer', err)
         pollForOfferFrom(peerName)
     });
   }).catch(err => {
@@ -295,7 +295,7 @@ function pollForPeers() {
               console.log(resp);
               window.setTimeout(() => pollForAnswerFrom(peerName), 1000);
             }).catch(err => {
-              console.warn("Offer to " + peerName + " failed", err);
+              console.error("Offer to " + peerName + " failed", err);
               peers[peerName].status = 'new';
             });
 
@@ -463,6 +463,6 @@ window.addEventListener('DOMContentLoaded', (event) => {
       console.log(stream.getVideoTracks()[0].getSettings())
       console.log(stream.getAudioTracks()[0].getSettings())
       myVid.play();
-    }).catch(e => console.log('getUserMedia: ', e));
+    }).catch(e => console.error('getUserMedia: ', e));
 });
 
