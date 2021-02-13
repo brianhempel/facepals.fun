@@ -8,48 +8,49 @@ gameDiv.style.backgroundImage = "url(/static/field.jpg)";
 
 
 let defaultConstants = {
-  playerInertiaIdle : 0.25,
-  playerInertiaMoving : 0.00005,
-  playerAccelMoving : 5000,
-  ballInertia : 0.5,
-  wallSpringConstant: 100,
-  objectSpringConstant: 200,
-  networkFPS : 30
+  playerGlideIdle      : 0.25,
+  playerGlideMoving    : 0.00005,
+  playerAccelMoving    : 2000,
+  ballGlide            : 0.5,
+  wallSpringConstant   : 100,
+  objectSpringConstant : 200,
+  networkFPS           : 30,
+  maxForce             : 3000,
 }
 
-let me                  = {x : Math.random() * gameW, y : -50, vx : 0, vy : 0, inertia : 0.25, radius : miniFaceSize / 2, mass : 1};
+let me                  = {x : Math.random() * gameW, y : -50, vx : 0, vy : 0, glide : 0.25, radius : miniFaceSize / 2, mass : 1};
 let ballElem            = document.createElement('img');
 ballElem.src            = "/static/ball.png"
-let ball                = {x : gameW / 2, y : gameH / 2, vx : 0, vy : 0, inertia : 0.5, radius : miniFaceSize / 4, mass : 0.25};
+let ball                = {x : gameW / 2, y : gameH / 2, vx : 0, vy : 0, glide : 0.5, radius : miniFaceSize / 4, mass : 0.25};
 ballElem.width          = 2 * ball.radius;
 ballElem.height         = 2 * ball.radius;
 ballElem.style.position = "absolute";
 gameDiv.appendChild(ballElem);
 
-function makePoll(x, y) {
-  let poll                       = {x : x, y : y, vx : 0, vy : 0, inertia : 0, radius : miniFaceSize / 8, mass : 1000000};
-  let pollElem                   = document.createElement('div');
-  pollElem.style.width           = 2 * poll.radius;
-  pollElem.style.height          = 2 * poll.radius;
-  pollElem.style.position        = "absolute";
-  pollElem.style.backgroundColor = "white";
-  pollElem.style.borderRadius    = "" + poll.radius + "px";
-  pollElem.style.left            = x - poll.radius / 2;
-  pollElem.style.top             = y - poll.radius / 2;
-  gameDiv.appendChild(pollElem);
-  return poll;
+function makePole(x, y) {
+  let pole                       = {x : x, y : y, vx : 0, vy : 0, glide : 0, radius : miniFaceSize / 8, mass : 1000000};
+  let poleElem                   = document.createElement('div');
+  poleElem.style.width           = 2 * pole.radius;
+  poleElem.style.height          = 2 * pole.radius;
+  poleElem.style.position        = "absolute";
+  poleElem.style.backgroundColor = "white";
+  poleElem.style.borderRadius    = "" + pole.radius + "px";
+  poleElem.style.left            = x - pole.radius / 2;
+  poleElem.style.top             = y - pole.radius / 2;
+  gameDiv.appendChild(poleElem);
+  return pole;
 }
 
 let gameState = {
   objects: {
     me: me,
     ball: ball,
-    poll1: makePoll( 45,         gameH/2 - 80),
-    poll2: makePoll( 45,         gameH/2 + 80),
-    poll3: makePoll( gameW - 45, gameH/2 - 80),
-    poll4: makePoll( gameW - 45, gameH/2 + 80),
+    pole1: makePole( 45,         gameH/2 - 80),
+    pole2: makePole( 45,         gameH/2 + 80),
+    pole3: makePole( gameW - 45, gameH/2 - 80),
+    pole4: makePole( gameW - 45, gameH/2 + 80),
   },
-  constants : defaultConstants
+  constants : JSON.parse(JSON.stringify(defaultConstants))
 };
 let objectKeysToUpdate  = [];
 let keysDown            = [];
@@ -82,6 +83,10 @@ Array.prototype.clear = function() {
   return this;
 };
 
+function clamp(lo, hi, x) {
+  return Math.max(lo, Math.min(hi, x));
+}
+
 let cos   = deg    => Math.cos(deg / 180 * Math.PI)
 let sin   = deg    => Math.sin(deg / 180 * Math.PI)
 let atan2 = (y, x) => Math.atan2(y, x) / Math.PI * 180
@@ -112,6 +117,9 @@ function gameStep() {
   let now = new Date();
   let dt = Math.min((now - lastGameTime) / 1000, 0.1);
 
+  let constants = gameState.constants;
+  let clampForce = x => clamp(-constants.maxForce, constants.maxForce, x);
+
   var intendedVx = 0;
   var intendedVy = 0;
 
@@ -121,14 +129,14 @@ function gameStep() {
   if (keysDown.includes("ArrowUp")    || keysDown.includes("w")) { intendedVy -= 1 };
 
   let intendedHeading = atan2(intendedVy, intendedVx);
-  let acceleration = gameState.constants.playerAccelMoving;
+  let acceleration = constants.playerAccelMoving;
 
   if (intendedVx != 0 || intendedVy != 0) {
     me.vx += cos(intendedHeading) * acceleration * dt;
     me.vy += sin(intendedHeading) * acceleration * dt;
-    me.inertia = gameState.constants.playerInertiaMoving;
+    me.glide = constants.playerGlideMoving;
   } else {
-    me.inertia = gameState.constants.playerInertiaIdle;
+    me.glide = constants.playerGlideIdle;
   }
   // } else {
   //   me.vx = 0;
@@ -142,16 +150,16 @@ function gameStep() {
     object.y += object.vy * dt;
 
     if (object.x - object.radius < 0) {
-      object.vx += (0 - (object.x - object.radius)) * gameState.constants.wallSpringConstant * dt;
+      object.vx += clampForce((0 - (object.x - object.radius)) * constants.wallSpringConstant) * dt;
     }
     if (object.x + object.radius > gameW) {
-      object.vx -= ((object.x + object.radius) - gameW) * gameState.constants.wallSpringConstant * dt;
+      object.vx -= clampForce(((object.x + object.radius) - gameW) * constants.wallSpringConstant) * dt;
     }
     if (object.y - object.radius < 0) {
-      object.vy += (0 - (object.y - object.radius)) * gameState.constants.wallSpringConstant * dt;
+      object.vy += clampForce((0 - (object.y - object.radius)) * constants.wallSpringConstant) * dt;
     }
     if (object.y + object.radius > gameH) {
-      object.vy -= ((object.y + object.radius) - gameH) * gameState.constants.wallSpringConstant * dt;
+      object.vy -= clampForce(((object.y + object.radius) - gameH) * constants.wallSpringConstant) * dt;
     }
   }
 
@@ -159,31 +167,34 @@ function gameStep() {
   for (key1 in objects) {
     for (key2 in objects) {
       if (key1 < key2) {
-        let obj1 = objects[key1];
-        let obj2 = objects[key2];
+        if ( key1 === "me" || key2 === "me" || (!(key1 in peers) && !(key2 in peers)) ) {
+          let obj1 = objects[key1];
+          let obj2 = objects[key2];
 
-        let dx = obj2.x - obj1.x;
-        let dy = obj2.y - obj1.y;
+          let dx = obj2.x - obj1.x;
+          let dy = obj2.y - obj1.y;
 
-        let radiusSum = obj1.radius + obj2.radius;
+          let radiusSum = obj1.radius + obj2.radius;
 
-        if (dx*dx + dy*dy < radiusSum * radiusSum) {
-          if (key1 === "me" || key2 === "me") {
-            if (key1 === "ball" || key2 === "ball") {
-              objectKeysToUpdate.addAsSet("ball");
+          if (dx*dx + dy*dy < radiusSum * radiusSum) {
+            if (key1 === "me" && !(key2 in peers)) {
+              objectKeysToUpdate.addAsSet(key2);
             }
+            if (key2 === "me" && !(key1 in peers)) {
+              objectKeysToUpdate.addAsSet(key1);
+            }
+
+            let interDistance       = Math.sqrt(dx*dx + dy*dy);
+            let penetrationDistance = radiusSum - interDistance;
+
+            let unitDx = dx / interDistance;
+            let unitDy = dy / interDistance;
+
+            obj1.vx -= clampForce(penetrationDistance * constants.objectSpringConstant * unitDx) * dt / obj1.mass;
+            obj1.vy -= clampForce(penetrationDistance * constants.objectSpringConstant * unitDy) * dt / obj1.mass;
+            obj2.vx += clampForce(penetrationDistance * constants.objectSpringConstant * unitDx) * dt / obj2.mass;
+            obj2.vy += clampForce(penetrationDistance * constants.objectSpringConstant * unitDy) * dt / obj2.mass;
           }
-
-          let interDistance       = Math.sqrt(dx*dx + dy*dy);
-          let penetrationDistance = radiusSum - interDistance;
-
-          let unitDx = dx / interDistance;
-          let unitDy = dy / interDistance;
-
-          obj1.vx -= penetrationDistance * gameState.constants.objectSpringConstant * unitDx * dt / obj1.mass;
-          obj2.vx += penetrationDistance * gameState.constants.objectSpringConstant * unitDx * dt / obj2.mass;
-          obj1.vy -= penetrationDistance * gameState.constants.objectSpringConstant * unitDy * dt / obj1.mass;
-          obj2.vy += penetrationDistance * gameState.constants.objectSpringConstant * unitDy * dt / obj2.mass;
         }
       }
     }
@@ -191,8 +202,8 @@ function gameStep() {
 
   for (key in objects) {
     let object = objects[key];
-    object.vx *= Math.pow(object.inertia, dt);
-    object.vy *= Math.pow(object.inertia, dt);
+    object.vx *= Math.pow(object.glide, dt);
+    object.vy *= Math.pow(object.glide, dt);
   }
 
   lastGameTime = now;
@@ -218,14 +229,14 @@ function handleMessage(peerName, remoteGameState) {
 var lastGameConstants = JSON.parse(JSON.stringify(gameState.constants));
 function broadcastStep() {
 
-  // Send self, but with less inertia for better intra-update prediction.
-  let update = { objects: { me: {x : me.x, y : me.y, vx : me.vx, vy : me.vy, inertia : (me.inertia == defaultConstants.playerInertiaMoving ? 1.0 : me.inertia), radius : me.radius, mass : me.mass} } };
+  // Send self, but with less glide for better intra-update prediction.
+  let update = { objects: { me: {x : me.x, y : me.y, vx : me.vx, vy : me.vy, glide : (me.glide == gameState.constants.playerGlideMoving ? 1.0 : me.glide), radius : me.radius, mass : me.mass} } };
 
-  for (key in gameState.objects) {
-    if (Math.random() < 0.0005) {
-      objectKeysToUpdate.addAsSet(key);
-    }
-  }
+  // for (key in gameState.objects) {
+  //   if (Math.random() < 0.0005) {
+  //     objectKeysToUpdate.addAsSet(key);
+  //   }
+  // }
 
   objectKeysToUpdate.forEach(key => {
     update.objects[key] = gameState.objects[key];
@@ -234,8 +245,8 @@ function broadcastStep() {
 
   if (lastGameConstants != gameState.constants || Math.random() < 0.0005) {
     update.constants = gameState.constants;
+    lastGameConstants = JSON.parse(JSON.stringify(gameState.constants));
   }
-  lastGameConstants = JSON.parse(JSON.stringify(gameState.constants));
 
   broadcast(update);
 
