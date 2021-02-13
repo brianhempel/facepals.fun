@@ -18,7 +18,7 @@ let with_dir path f =
 let names_in_dir path =
   let open Lwt.Syntax in
   with_dir path @@ fun dir_handle ->
-    let* entries_array = Lwt_unix.readdir_n dir_handle 100_000 in
+    let* entries_array = Lwt_unix.readdir_n dir_handle 100_000_000 in
     entries_array
     |> Array.to_list
     |> List.filter (fun entry -> entry.[0] != '.')
@@ -30,11 +30,27 @@ let req_body_to_file req path =
   let* _ = ensure_dir dir_path in
   let* body_str = Body.to_string req.Request.body in
   (* let flags = if append = Some true then [Unix.O_APPEND; Unix.O_WRONLY] else [Unix.O_WRONLY] in *)
-  Lwt_io.with_file ~mode:Lwt_io.Output path @@ fun out_chan ->
-    Lwt_io.write_from_string_exactly
-      out_chan
-      body_str
-      0 (String.length body_str)
+  (* Lwt_io.with_file ~mode:Lwt_io.Output path @@ fun out_chan -> *)
+  (* Lwt_io.with_temp_file @@ fun (temp_path, out_chan) ->
+    let* _ =
+      Lwt_io.write_from_string_exactly
+        out_chan
+        body_str
+        0 (String.length body_str)
+    in
+    Lwt_unix.rename temp_path path *)
+  let* (temp_path, out_chan) = Lwt_io.open_temp_file () in
+  Lwt.finalize
+    (fun () ->
+      let* _ =
+        Lwt_io.write_from_string_exactly
+          out_chan
+          body_str
+          0 (String.length body_str)
+      in
+      Lwt_unix.rename temp_path path)
+    (fun () -> Lwt_io.close out_chan)
+
 
 let respond_with_json_file path =
   let open Lwt.Syntax in
@@ -128,7 +144,7 @@ let list_ice_candidate_ids req =
   let candidates_dir_path = Core.Filename.of_parts ["rooms"; room_name; "peers"; target_peer_name; "ice_candidates"; sending_peer_name] in
   let open Lwt.Syntax in
   let* ice_candidate_ids = names_in_dir candidates_dir_path in
-  let ice_candidate_ids = ice_candidate_ids |> List.sort (fun name1 name2 -> Float.compare (float_of_string name1) (float_of_string name2)) in
+  let ice_candidate_ids = ice_candidate_ids |> List.sort (fun name1 name2 -> Int.compare (int_of_string name1) (int_of_string name2)) in
   Response.of_json (`Assoc [ "ice_candidate_ids", `List (List.map (fun name -> `String name) ice_candidate_ids) ])
   |> Lwt.return
 
