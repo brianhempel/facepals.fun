@@ -281,10 +281,6 @@ window.setTimeout(broadcastStep, 100);
 document.addEventListener("keydown", event => { keysDown.addAsSet(event.key);    if (usedKeys.includes(event.key)) { event.preventDefault() } });
 document.addEventListener("keyup",   event => { keysDown.removeAsSet(event.key); if (usedKeys.includes(event.key)) { event.preventDefault() } });
 
-document.getElementById("fullscreenButton").addEventListener("click", () => {
-  gameDiv.requestFullscreen();
-});
-
 function tick() {
   gameStep();
 
