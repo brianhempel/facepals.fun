@@ -381,7 +381,7 @@ function removePeer(peerName) {
     try {
       peer.status = 'gone';
       peer.peerConn.close();
-      peer.vidElem.remove();
+      if (peer.vidElem) { peer.vidElem.remove(); }
     } catch (err) {
       console.warn("Error removing peer ", err);
     }
