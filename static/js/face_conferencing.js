@@ -85,6 +85,7 @@ function acquirePeerName() {
   .then(resp => resp.ok ? resp.json() :  Promise.reject(resp))
   .then(data => {
     myPeerName = data.peer_name;
+    console.log("My peer name is " + myPeerName);
     heartbeat();
     pollForPeers();
   }).catch(err => {
