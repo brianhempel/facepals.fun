@@ -26,6 +26,7 @@ ballElem.width          = 2 * ball.radius;
 ballElem.height         = 2 * ball.radius;
 ballElem.style.position = "absolute";
 gameDiv.appendChild(ballElem);
+let objectsKeysIOwn     = [];
 
 function makePole(x, y) {
   let pole                       = {x : x, y : y, vx : 0, vy : 0, glide : 0, radius : miniFaceSize / 8, mass : 1000000};
@@ -52,9 +53,9 @@ let gameState = {
   },
   constants : JSON.parse(JSON.stringify(defaultConstants))
 };
-let objectKeysToUpdate  = [];
-let keysDown            = [];
-let lastGameTime        = new Date();
+let objectKeysIOwn = [];
+let keysDown       = [];
+let lastGameTime   = new Date();
 
 let usedKeys = ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "a", "s", "d", "w"];
 
@@ -178,10 +179,10 @@ function gameStep() {
 
           if (dx*dx + dy*dy < radiusSum * radiusSum) {
             if (key1 === "me" && !(key2 in peers)) {
-              objectKeysToUpdate.addAsSet(key2);
+              objectKeysIOwn.addAsSet(key2);
             }
             if (key2 === "me" && !(key1 in peers)) {
-              objectKeysToUpdate.addAsSet(key1);
+              objectKeysIOwn.addAsSet(key1);
             }
 
             let interDistance       = Math.sqrt(dx*dx + dy*dy);
@@ -216,6 +217,7 @@ function handleMessage(peerName, remoteGameState) {
       if (!(localKey in localObj)) {
         localObj[localKey] = remoteObj[remoteKey];
       } else if (typeof remoteObj[remoteKey] === "object") {
+        objectKeysIOwn.removeAsSet(remoteKey);
         update(localObj[localKey], remoteObj[remoteKey]);
       } else {
         localObj[localKey] = remoteObj[remoteKey];
@@ -255,14 +257,14 @@ function broadcastStep() {
 
   // for (key in gameState.objects) {
   //   if (Math.random() < 0.0005) {
-  //     objectKeysToUpdate.addAsSet(key);
+  //     objectKeysIOwn.addAsSet(key);
   //   }
   // }
 
-  objectKeysToUpdate.forEach(key => {
+  objectKeysIOwn.forEach(key => {
     update.objects[key] = gameState.objects[key];
   });
-  objectKeysToUpdate.clear();
+  // objectKeysIOwn.clear();
 
   if (!gameConstantsMatch(lastGameConstants, gameState.constants) || Math.random() < 0.0005) {
     update.constants = gameState.constants;
