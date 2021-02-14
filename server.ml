@@ -99,6 +99,52 @@ let list_peers req =
   Response.of_json (`Assoc [ "peers", `List (List.map (fun name -> `String name) peer_names) ])
   |> Lwt.return
 
+
+let is_dir path =
+  let open Lwt.Syntax in
+  let* stat = Lwt_unix.stat path in
+  Lwt.return (stat.st_kind == S_DIR)
+
+let rec rm_r dir_path =
+  let open Lwt.Syntax in
+  let* names = names_in_dir dir_path in
+  let* _ = rm_all @@ List.map (fun name -> Core.Filename.concat dir_path name) names in
+  Lwt_unix.rmdir dir_path
+and rm_all = function
+| []          -> Lwt.return ()
+| path::paths ->
+  let open Lwt.Syntax in
+  let* is_dir = is_dir path in
+  let* _ = if is_dir then rm_r path else Lwt_unix.unlink path in
+  rm_all paths
+
+let peer_heartbeat req =
+  let room_name      = Router.param req "room_name" in
+  let peer_name      = Router.param req "peer_name" in
+  let peers_dir_path = Core.Filename.of_parts ["rooms"; room_name; "peers"] in
+  let peer_dir_path  = Core.Filename.of_parts ["rooms"; room_name; "peers"; peer_name] in
+  let open Lwt.Syntax in
+  let* path_exists = Lwt_unix.file_exists peer_dir_path in
+  if path_exists then begin
+    Lwt.async (fun () -> Lwt_unix.utimes peer_dir_path 0.0 0.0);
+    (* Take this opportunity to check another peer for timeout. *)
+    let* peerNames = names_in_dir peers_dir_path in
+    let peerNames = List.filter (fun name -> name <> peer_name) peerNames in
+    if List.length peerNames > 0 then
+      let peer_name_to_check = List.nth peerNames (Random.int (List.length peerNames)) in
+      let peer_dir_path_to_check = Core.Filename.of_parts ["rooms"; room_name; "peers"; peer_name_to_check] in
+      let* peerStat = Lwt_unix.stat peer_dir_path_to_check in
+      let age_seconds = Unix.time () -. peerStat.st_mtime in
+      (* print_endline (string_of_float age_seconds); *)
+      if age_seconds > 20.0 then
+        Lwt.async (fun () -> rm_r peer_dir_path_to_check);
+      Lwt.return (Response.make ())
+    else
+      Lwt.return (Response.make ())
+  end else
+    Lwt.return (Response.make ())
+
+
 let new_peer_offer req =
   let room_name = Router.param req "room_name" in
   let target_peer_name = Router.param req "peer_name" in
@@ -195,6 +241,7 @@ let _ =
   |> App.get "/rooms/:room_name" (fun _ -> respond_with_known_html (Core.Filename.of_parts ["static"; "game.html"]))
   |> App.post "/rooms/:room_name/peers" new_peer_name
   |> App.get "/rooms/:room_name/peers" list_peers
+  |> App.post "/rooms/:room_name/peers/:peer_name/heartbeat" peer_heartbeat
   |> App.post "/rooms/:room_name/peers/:peer_name/offers/:offering_peer_name" new_peer_offer
   |> App.get "/rooms/:room_name/peers/:peer_name/offers/:offering_peer_name" get_peer_offer
   |> App.post "/rooms/:room_name/peers/:peer_name/answers/:answering_peer_name" new_peer_answer

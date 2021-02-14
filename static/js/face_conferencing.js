@@ -53,6 +53,10 @@ Array.prototype.maxBy = function(f) {
   return best_elem;
 };
 
+Array.prototype.subtract = function (subtrahendArr) {
+  return this.filter(elem => !subtrahendArr.includes(elem));
+}
+
 
 // The protocol is to:
 
@@ -81,17 +85,30 @@ function acquirePeerName() {
   .then(resp => resp.ok ? resp.json() :  Promise.reject(resp))
   .then(data => {
     myPeerName = data.peer_name;
+    heartbeat();
     pollForPeers();
   }).catch(err => {
     console.warn("Couldn't acquire peer name", err);
     window.setTimeout(acquirePeerName, 3000);
   });
+}
 
-  // myPeerName = "69873513-46801558-cc6cfce0-e4830396";
-  // pollForPeers();
+function heartbeat() {
+  fetch('/rooms/' + roomName + '/peers/' + myPeerName + '/heartbeat', { method: 'POST' })
+  .then(resp => resp.ok ? resp :  Promise.reject(resp))
+  .then(data => {
+    window.setTimeout(heartbeat, 5000);
+  }).catch(err => {
+    console.warn("Heartbeat error", err);
+    window.setTimeout(heartbeat, 5000);
+  });
 }
 
 function pollForAnswerFrom(peerName) {
+  if (!(peerName in peers)) { // Peer removed.
+    return;
+  }
+
   fetch('/rooms/' + roomName + '/peers/' + myPeerName + '/answers/' + peerName)
   .then(resp => resp.ok ? resp.json() :  Promise.reject(resp))
   .then(data => {
@@ -121,6 +138,10 @@ function makeOnIceCandidateHandler(peerName) {
     });
   };
   return function (event) {
+    if (!(peerName in peers)) { // Peer removed.
+      return;
+    }
+
     if (event.candidate) {
       sendIceCandidate(event.candidate.toJSON());
     }
@@ -129,6 +150,10 @@ function makeOnIceCandidateHandler(peerName) {
 
 function makeOnTrackHandler(peerName) {
   return function (event) {
+    if (!(peerName in peers)) { // Peer removed.
+      return;
+    }
+
     if (!peers[peerName].vidElem) {
       let vidElem                = document.createElement("video");
       vidElem.width              = miniFaceSize;
@@ -145,6 +170,9 @@ function makeOnTrackHandler(peerName) {
 
 function makeOnMessageHandler(peerName) {
   return function (event) {
+    if (!(peerName in peers)) { // Peer removed.
+      return;
+    }
     // Up to the game to implement this.
     // console.log("receiving ", event.data);
     handleMessage(peerName, JSON.parse(event.data));
@@ -152,7 +180,7 @@ function makeOnMessageHandler(peerName) {
 }
 
 function broadcast(data) {
-  for (peerName in peers) {
+  for (const peerName in peers) {
     // console.log(peers[peerName].dataChan);
     if (peers[peerName].dataChan && peers[peerName].dataChan.readyState === "open") {
       // console.log("broadcasting ", data);
@@ -162,6 +190,10 @@ function broadcast(data) {
 };
 
 function getIceCandidateData(peerName, candidateId) {
+  if (!(peerName in peers)) { // Peer removed.
+    return;
+  }
+
   fetch('/rooms/' + roomName + '/peers/' + myPeerName + '/ice_candidates/' + peerName + '/' + candidateId)
   .then(resp => resp.ok ? resp.json() :  Promise.reject(resp))
   .then(data => {
@@ -173,6 +205,10 @@ function getIceCandidateData(peerName, candidateId) {
 }
 
 function pollForIceCandidates(peerName, delayMs) {
+  if (!(peerName in peers)) { // Peer removed.
+    return;
+  }
+
   if (!peers[peerName].iceCandidateIdsProcessed) {
     peers[peerName].iceCandidateIdsProcessed = [];
   }
@@ -194,6 +230,9 @@ function pollForIceCandidates(peerName, delayMs) {
 }
 
 function pollForOfferFrom(peerName) {
+  if (!(peerName in peers)) { // Peer removed.
+    return;
+  }
   fetch('/rooms/' + roomName + '/peers/' + myPeerName + '/offers/' + peerName)
   .then(resp => resp.ok ? resp.json() :  Promise.reject(resp))
   .then(data => {
@@ -243,11 +282,16 @@ function pollForPeers() {
   .then(resp => resp.ok ? resp.json() :  Promise.reject(resp))
   .then(data => {
     // console.log(data);
+    if (!data.peers.includes(myPeerName)) {
+      // We lost connection at some point. Need to renegotiate.
+      window.location.reload();
+    }
     data.peers.forEach(peerName => {
-      if (!peers[peerName]) {
+      if (!(peerName in peers)) {
         peers[peerName] = { status: 'new' };
       }
     });
+    Object.keys(peers).subtract(data.peers).forEach(removePeer);
     for (const peerName in peers) {
       // 3. When a peer is listed that you haven't connected to, it is the
       //   responsibility of the lexigraphically lower peer_name to offer, so:
@@ -281,9 +325,9 @@ function pollForPeers() {
               voiceActivityDetection: true
             })
             .then(localConnDesc => {
-              console.log(localConnDesc);
-              console.log(localConnDesc.type);
-              console.log(localConnDesc.sdp);
+              // console.log(localConnDesc);
+              // console.log(localConnDesc.type);
+              // console.log(localConnDesc.sdp);
               peerConn.setLocalDescription(localConnDesc);
               return fetch('/rooms/' + roomName + '/peers/' + peerName + '/offers/' + myPeerName, {
                 method: 'POST',
@@ -328,6 +372,24 @@ function pollForPeers() {
         }
       });
     }
+  }
+}
+
+function removePeer(peerName) {
+  let peer = peers[peerName];
+  if (peer.peerConn) {
+    try {
+      peer.status = 'gone';
+      peer.peerConn.close();
+      peer.vidElem.remove();
+    } catch (err) {
+      console.warn("Error removing peer ", err);
+    }
+  }
+  delete peers[peerName];
+
+  if (window.removePeerFromGame) {
+    removePeerFromGame(peerName);
   }
 }
 

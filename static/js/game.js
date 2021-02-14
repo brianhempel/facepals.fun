@@ -225,6 +225,10 @@ function handleMessage(peerName, remoteGameState) {
   update(gameState, remoteGameState);
 }
 
+function removePeerFromGame(peerName) {
+  delete gameState.objects[peerName];
+}
+
 
 var lastGameConstants = JSON.parse(JSON.stringify(gameState.constants));
 
