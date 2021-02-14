@@ -15,7 +15,7 @@ let defaultConstants = {
   wallSpringConstant   : 100,
   objectSpringConstant : 200,
   networkFPS           : 30,
-  maxForce             : 3000,
+  maxForce             : 5000,
 }
 
 let me                  = {x : Math.random() * gameW, y : -50, vx : 0, vy : 0, glide : 0.25, radius : miniFaceSize / 2, mass : 1};
@@ -227,6 +227,23 @@ function handleMessage(peerName, remoteGameState) {
 
 
 var lastGameConstants = JSON.parse(JSON.stringify(gameState.constants));
+
+function gameConstantsMatch(gc1, gc2) {
+  for (key in gc1) {
+    if (gc1[key] != gc2[key]) {
+      console.log(key);
+      return false;
+    }
+  }
+  for (key in gc2) {
+    if (!(key in gc1)) {
+      console.log(key);
+      return false;
+    }
+  }
+  return true;
+}
+
 function broadcastStep() {
 
   // Send self, but with less glide for better intra-update prediction.
@@ -243,8 +260,9 @@ function broadcastStep() {
   });
   objectKeysToUpdate.clear();
 
-  if (lastGameConstants != gameState.constants || Math.random() < 0.0005) {
+  if (!gameConstantsMatch(lastGameConstants, gameState.constants) || Math.random() < 0.0005) {
     update.constants = gameState.constants;
+    // console.log(gameState.constants);
     lastGameConstants = JSON.parse(JSON.stringify(gameState.constants));
   }
 
