@@ -428,6 +428,11 @@ function askForFaceDetection() {
 
 
 window.addEventListener('DOMContentLoaded', (event) => {
+  document.querySelectorAll("a.inviteLink").forEach(elem => {
+    elem.href      = window.location.href;
+    elem.innerHTML = elem.href;
+  });
+
   myVid.addEventListener('playing', () => {
     let myFaceCtx = myFaceCanvas.getContext('2d');
 
