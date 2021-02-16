@@ -217,8 +217,19 @@ function handleMessage(peerName, remoteGameState) {
       if (!(localKey in localObj)) {
         localObj[localKey] = remoteObj[remoteKey];
       } else if (typeof remoteObj[remoteKey] === "object") {
-        objectKeysIOwn.removeAsSet(remoteKey);
-        update(localObj[localKey], remoteObj[remoteKey]);
+        if (objectKeysIOwn.includes(remoteKey) && gameState.objects[peerName] && gameState.objects[remoteKey]) {
+          // Only relinquish ownership if I think the object is closer to the peer in question.
+          let dxMe   = gameState.objects.me.x        - gameState.objects[remoteKey].x;
+          let dyMe   = gameState.objects.me.y        - gameState.objects[remoteKey].y;
+          let dxPeer = gameState.objects[peerName].x - gameState.objects[remoteKey].x;
+          let dyPeer = gameState.objects[peerName].y - gameState.objects[remoteKey].y;
+          if (dxMe*dxMe + dyMe*dyMe > dxPeer*dxPeer + dyPeer*dyPeer) {
+            objectKeysIOwn.removeAsSet(remoteKey);
+            update(localObj[localKey], remoteObj[remoteKey]);
+          }
+        } else {
+          update(localObj[localKey], remoteObj[remoteKey]);
+        }
       } else {
         localObj[localKey] = remoteObj[remoteKey];
       }
