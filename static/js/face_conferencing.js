@@ -309,7 +309,7 @@ function pollForPeers() {
           peers[peerName].status = 'offering';
           let peerConn = peers[peerName].peerConn || new RTCPeerConnection(peerConnConfig);
           if (!peers[peerName].peerConn) {
-            let dataChan             = peerConn.createDataChannel('channel to ' + peerName, { ordered: false, maxRetransmits: 0 });
+            let dataChan             = peerConn.createDataChannel('channel to ' + peerName, { ordered: true, maxRetransmits: 0 });
             console.log(dataChan);
             dataChan.onmessage       = makeOnMessageHandler(peerName);
             dataChan.onopen          = event => console.log("Channel opened to " + peerName);
