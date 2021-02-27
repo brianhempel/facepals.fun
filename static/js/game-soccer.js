@@ -46,10 +46,10 @@ let gameState = {
   objects: {
     me: me,
     ball: ball,
-    pole1: makePole( 45,         gameH/2 - 80),
-    pole2: makePole( 45,         gameH/2 + 80),
-    pole3: makePole( gameW - 45, gameH/2 - 80),
-    pole4: makePole( gameW - 45, gameH/2 + 80),
+    pole1: makePole( 45,         gameH/2 - 100),
+    pole2: makePole( 45,         gameH/2 + 100),
+    pole3: makePole( gameW - 45, gameH/2 - 100),
+    pole4: makePole( gameW - 45, gameH/2 + 100),
   },
   constants : JSON.parse(JSON.stringify(defaultConstants))
 };
@@ -306,7 +306,7 @@ function tick() {
 requestAnimationFrame(tick);
 
 window.addEventListener('DOMContentLoaded', (event) => {
-  let colors = ["black", "#ddd", "blue", "#a0a", "maroon", "#b70", "#bb0", "#0a0", "#0bb"];
+  let colors = ["black", "#ddd", "blue", "#a0a", "maroon", "#e70", "#cc0", "#0a0", "#0cc"];
 
   let colorPicker = document.createElement('p');
 
