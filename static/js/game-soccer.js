@@ -139,10 +139,6 @@ function gameStep() {
   } else {
     me.glide = constants.playerGlideIdle;
   }
-  // } else {
-  //   me.vx = 0;
-  //   me.vy = 0;
-  // }
 
   let objects = gameState.objects;
   for (key in objects) {
@@ -263,14 +259,8 @@ function gameConstantsMatch(gc1, gc2) {
 
 function broadcastStep() {
 
-  // Send self, but with less glide for better intra-update prediction.
+  // Send self, but with more glide for better intra-update prediction.
   let update = { objects: { me: {x : me.x, y : me.y, vx : me.vx, vy : me.vy, glide : (me.glide == gameState.constants.playerGlideMoving ? 1.0 : me.glide), radius : me.radius, mass : me.mass} } };
-
-  // for (key in gameState.objects) {
-  //   if (Math.random() < 0.0005) {
-  //     objectKeysIOwn.addAsSet(key);
-  //   }
-  // }
 
   objectKeysIOwn.forEach(key => {
     update.objects[key] = gameState.objects[key];
