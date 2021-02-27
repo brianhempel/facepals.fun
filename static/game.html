@@ -15,6 +15,14 @@
     </p>
     <!-- <script src="/static/js/phaser.js"></script> -->
     <!-- <script src="/static/js/pixi.js"></script> -->
+    <script>
+      if (/Firefox/.test(navigator.userAgent)) {
+        let warning = document.createElement('p');
+        warning.textContent = "Firefox doesn't work the best. You will look glitchy to your friends. Try Chrome, Safari, or Brave."
+        document.querySelector('h1').after(warning);
+      }
+    </script>
+
     <script src="/static/js/adapter.js"></script>
     <!-- <script src="/static/js/face-api.js"></script> -->
     <!-- <script src="/static/js/opencv.js"></script> -->
