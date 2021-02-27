@@ -18,7 +18,7 @@ let defaultConstants = {
   maxForce             : 2000,
 }
 
-let me                  = {x : Math.random() * gameW, y : -50, vx : 0, vy : 0, glide : 0.25, radius : miniFaceSize / 2, mass : 1};
+let me                  = {x : Math.random() * gameW, y : -50, vx : 0, vy : 0, glide : 0.25, radius : miniFaceSize / 2, mass : 1, color: "black"};
 let ballElem            = document.createElement('img');
 ballElem.src            = "/static/ball.png"
 let ball                = {x : gameW / 2, y : gameH / 2, vx : 0, vy : 0, glide : 0.5, radius : miniFaceSize / 4, mass : 0.25};
@@ -260,7 +260,7 @@ function gameConstantsMatch(gc1, gc2) {
 function broadcastStep() {
 
   // Send self, but with more glide for better intra-update prediction.
-  let update = { objects: { me: {x : me.x, y : me.y, vx : me.vx, vy : me.vy, glide : (me.glide == gameState.constants.playerGlideMoving ? 1.0 : me.glide), radius : me.radius, mass : me.mass} } };
+  let update = { objects: { me: {x : me.x, y : me.y, vx : me.vx, vy : me.vy, glide : (me.glide == gameState.constants.playerGlideMoving ? 1.0 : me.glide), radius : me.radius, mass : me.mass, color : me.color} } };
 
   objectKeysIOwn.forEach(key => {
     update.objects[key] = gameState.objects[key];
@@ -288,8 +288,9 @@ function tick() {
   for (peerName in peers) {
     if (peerName in gameState.objects) {
       if (peers[peerName].vidElem) {
-        peers[peerName].vidElem.style.left = Math.floor(gameState.objects[peerName].x - miniFaceSize / 2);
-        peers[peerName].vidElem.style.top  = Math.floor(gameState.objects[peerName].y - miniFaceSize / 2);
+        peers[peerName].vidElem.style.left        = Math.floor(gameState.objects[peerName].x - miniFaceSize / 2);
+        peers[peerName].vidElem.style.top         = Math.floor(gameState.objects[peerName].y - miniFaceSize / 2);
+        peers[peerName].vidElem.style.borderColor = gameState.objects[peerName].color;
       }
     }
   }
@@ -303,3 +304,40 @@ function tick() {
 }
 
 requestAnimationFrame(tick);
+
+window.addEventListener('DOMContentLoaded', (event) => {
+  let colors = ["black", "#ddd", "blue", "#a0a", "maroon", "#b70", "#bb0", "#0a0", "#0bb"];
+
+  let colorPicker = document.createElement('p');
+
+  let restyleSwatches = () => {
+    colorPicker.childNodes.forEach(swatch => {
+      if (me.color === swatch.style.backgroundColor) {
+        swatch.style.borderColor = "white";
+      } else {
+        swatch.style.borderColor = "transparent";
+      }
+    });
+  };
+
+  colors.forEach(color => {
+    let swatch = document.createElement("span");
+    swatch.style.backgroundColor = color;
+    swatch.style.display = "inline-block";
+    swatch.style.width = "55px";
+    swatch.style.height = "30px";
+    swatch.style.margin = "0 8px";
+    swatch.style.cursor = "pointer";
+    swatch.style.border = "5px solid transparent";
+    swatch.onclick = function (event) {
+      me.color = event.target.style.backgroundColor;
+      myFaceCanvas.style.borderColor = me.color;
+      restyleSwatches();
+      event.stopPropagation();
+    };
+    colorPicker.appendChild(swatch);
+  });
+  restyleSwatches();
+
+  gameDiv.after(colorPicker);
+});

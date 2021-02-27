@@ -10,11 +10,9 @@
       <canvas id="myFaceCanvas" style="position: absolute"></canvas>
       <video id="myVid" muted style="display: none"></video>
     </div>
-    <p style="text-align: center;">
+    <p>
       Invite your friends! Send them this link: <a class="inviteLink"></a>
     </p>
-    <!-- <script src="/static/js/phaser.js"></script> -->
-    <!-- <script src="/static/js/pixi.js"></script> -->
     <script>
       if (/Firefox/.test(navigator.userAgent)) {
         let warning = document.createElement('p');
@@ -22,10 +20,7 @@
         document.querySelector('h1').after(warning);
       }
     </script>
-
     <script src="/static/js/adapter.js"></script>
-    <!-- <script src="/static/js/face-api.js"></script> -->
-    <!-- <script src="/static/js/opencv.js"></script> -->
     <script src="/static/js/face_conferencing.js"></script>
     <script src="/static/js/game-soccer.js"></script>
   </body>
