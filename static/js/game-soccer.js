@@ -9,13 +9,13 @@ gameDiv.style.backgroundImage = "url(/static/field.jpg)";
 
 let defaultConstants = {
   playerGlideIdle      : 0.25,
-  playerGlideMoving    : 0.00005,
-  playerAccelMoving    : 2000,
+  playerGlideMoving    : 0.00002,
+  playerAccelMoving    : 2300,
   ballGlide            : 0.5,
   wallSpringConstant   : 100,
   objectSpringConstant : 200,
   networkFPS           : 30,
-  maxForce             : 5000,
+  maxForce             : 2000,
 }
 
 let me                  = {x : Math.random() * gameW, y : -50, vx : 0, vy : 0, glide : 0.25, radius : miniFaceSize / 2, mass : 1};
@@ -63,7 +63,7 @@ Array.prototype.addAsSet = function(elem) {
   if (!this.includes(elem)) {
     this.push(elem);
   }
-  console.log(this);
+  // console.log(this);
   return this;
 };
 
