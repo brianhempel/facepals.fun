@@ -12,7 +12,7 @@ var faceDetectionWorker;
 var faceCX, faceCY, faceSize;
 var targetFaceCX, targetFaceCY, targetFaceSize;
 var myVidStream;
-var myFaceStream    = myFaceCanvas.captureStream(15);
+var myFaceStream;
 var myPeerName;
 var roomName        = window.location.href.match(/\/rooms\/([A-Za-z0-9'_!\-]+)/)[1];
 var peers           = {};
@@ -434,9 +434,10 @@ window.addEventListener('DOMContentLoaded', (event) => {
     elem.innerHTML = elem.href;
   });
 
-  myVid.addEventListener('playing', () => {
-    let myFaceCtx = myFaceCanvas.getContext('2d');
+  let myFaceCtx = myFaceCanvas.getContext('2d');
+  myFaceStream = myFaceCanvas.captureStream(15);
 
+  myVid.addEventListener('playing', () => {
     function drawFace() {
       // myCtx.drawImage(myVid, 0, 0);
 
