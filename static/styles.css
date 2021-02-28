@@ -35,8 +35,6 @@ form button {
   width: 100%;
 }
 
-
 canvas, video {
-  background-color: black;
-  border: 2px solid black;
+  background-color: white;
 }

@@ -1,3 +1,7 @@
+function clone(obj) {
+  return JSON.parse(JSON.stringify(obj));
+}
+
 
 let gameW                     = 16*80
 let gameH                     = 9*80
@@ -11,22 +15,35 @@ let defaultConstants = {
   playerGlideIdle      : 0.25,
   playerGlideMoving    : 0.00002,
   playerAccelMoving    : 2300,
-  ballGlide            : 0.5,
+  playerRadius         : miniFaceSize / 2,
+  playerMass           : 1,
+  playerAsBallAccel    : 100,
+  playerAsBallRadius   : Math.round(miniFaceSize / 3),
   wallSpringConstant   : 100,
   objectSpringConstant : 200,
   networkFPS           : 30,
   maxForce             : 2000,
 }
 
-let me                  = {x : Math.random() * gameW, y : -50, vx : 0, vy : 0, glide : 0.25, radius : miniFaceSize / 2, mass : 1, color: "black"};
+let defaultBallParams = {
+  x        : gameW / 2,
+  y        : gameH / 2,
+  vx       : 0,
+  vy       : 0,
+  glide    : 0.5,
+  radius   : miniFaceSize / 4,
+  mass     : 0.25,
+  disabled : false,
+}
+
+
+let me                  = {x : Math.random() * gameW, y : -50, vx : 0, vy : 0, glide : defaultConstants.playerGlideIdle, radius : defaultConstants.playerRadius, mass : defaultConstants.playerMass, color: "black", isBall : false};
 let ballElem            = document.createElement('img');
 ballElem.src            = "/static/ball.png"
-let ball                = {x : gameW / 2, y : gameH / 2, vx : 0, vy : 0, glide : 0.5, radius : miniFaceSize / 4, mass : 0.25};
-ballElem.width          = 2 * ball.radius;
-ballElem.height         = 2 * ball.radius;
+ballElem.width          = 2 * defaultBallParams.radius;
+ballElem.height         = 2 * defaultBallParams.radius;
 ballElem.style.position = "absolute";
 gameDiv.appendChild(ballElem);
-let objectsKeysIOwn     = [];
 
 function makePole(x, y) {
   let pole                       = {x : x, y : y, vx : 0, vy : 0, glide : 0, radius : miniFaceSize / 8, mass : 1000000};
@@ -45,13 +62,13 @@ function makePole(x, y) {
 let gameState = {
   objects: {
     me: me,
-    ball: ball,
+    ball: clone(defaultBallParams),
     pole1: makePole( 45,         gameH/2 - 100),
     pole2: makePole( 45,         gameH/2 + 100),
     pole3: makePole( gameW - 45, gameH/2 - 100),
     pole4: makePole( gameW - 45, gameH/2 + 100),
   },
-  constants : JSON.parse(JSON.stringify(defaultConstants))
+  constants : clone(defaultConstants)
 };
 let objectKeysIOwn = [];
 let keysDown       = [];
@@ -129,15 +146,24 @@ function gameStep() {
   if (keysDown.includes("ArrowRight") || keysDown.includes("d")) { intendedVx += 1 };
   if (keysDown.includes("ArrowUp")    || keysDown.includes("w")) { intendedVy -= 1 };
 
-  let intendedHeading = atan2(intendedVy, intendedVx);
-  let acceleration = constants.playerAccelMoving;
 
-  if (intendedVx != 0 || intendedVy != 0) {
-    me.vx += cos(intendedHeading) * acceleration * dt;
-    me.vy += sin(intendedHeading) * acceleration * dt;
-    me.glide = constants.playerGlideMoving;
+  if (!me.isBall) {
+    let intendedHeading = atan2(intendedVy, intendedVx);
+    let acceleration = constants.playerAccelMoving;
+
+    if (intendedVx != 0 || intendedVy != 0) {
+      me.vx += cos(intendedHeading) * acceleration * dt;
+      me.vy += sin(intendedHeading) * acceleration * dt;
+      me.glide = constants.playerGlideMoving;
+    } else {
+      me.glide = constants.playerGlideIdle;
+    }
   } else {
-    me.glide = constants.playerGlideIdle;
+    me.vy     += intendedVy * constants.playerAsBallAccel * dt;
+    me.radius  = Math.max(5, me.radius + intendedVx);
+    me.mass    = defaultBallParams.mass * me.radius * me.radius / (constants.playerAsBallRadius * constants.playerAsBallRadius);
+    me.glide   = defaultBallParams.glide;
+    console.log(me);
   }
 
   let objects = gameState.objects;
@@ -239,7 +265,7 @@ function removePeerFromGame(peerName) {
 }
 
 
-var lastGameConstants = JSON.parse(JSON.stringify(gameState.constants));
+var lastGameConstants = clone(gameState.constants);
 
 function gameConstantsMatch(gc1, gc2) {
   for (key in gc1) {
@@ -260,7 +286,29 @@ function gameConstantsMatch(gc1, gc2) {
 function broadcastStep() {
 
   // Send self, but with more glide for better intra-update prediction.
-  let update = { objects: { me: {x : me.x, y : me.y, vx : me.vx, vy : me.vy, glide : (me.glide == gameState.constants.playerGlideMoving ? 1.0 : me.glide), radius : me.radius, mass : me.mass, color : me.color} } };
+  let update = { objects: { me: {x : me.x, y : me.y, vx : me.vx, vy : me.vy, glide : (me.glide == gameState.constants.playerGlideMoving ? 1.0 : me.glide), radius : me.radius, mass : me.mass, color : me.color, isBall : me.isBall} } };
+  let ball = gameState.objects.ball;
+
+  if (ball.disabled) {
+    var anyBalls = me.isBall;
+    for (peerName in peers) {
+      if (peerName in gameState.objects && gameState.objects[peerName].isBall) { anyBalls = true; }
+    }
+    if (!anyBalls) {
+      ball.disabled = false;
+      gameState.objects.ball = clone(defaultBallParams);
+      objectKeysIOwn.addAsSet("ball");
+    }
+  } else if (me.isBall && !ball.disabled) {
+    ball.disabled = true;
+    objectKeysIOwn.addAsSet("ball");
+  } else if (objectKeysIOwn.includes("ball")) {
+    var anyBalls = me.isBall;
+    for (peerName in peers) {
+      if (peerName in gameState.objects && gameState.objects[peerName].isBall) { anyBalls = true; }
+    }
+    if (anyBalls) { ball.disabled = true; }
+  }
 
   objectKeysIOwn.forEach(key => {
     update.objects[key] = gameState.objects[key];
@@ -270,7 +318,7 @@ function broadcastStep() {
   if (!gameConstantsMatch(lastGameConstants, gameState.constants) || Math.random() < 0.0005) {
     update.constants = gameState.constants;
     // console.log(gameState.constants);
-    lastGameConstants = JSON.parse(JSON.stringify(gameState.constants));
+    lastGameConstants = clone(gameState.constants);
   }
 
   broadcast(update);
@@ -282,23 +330,56 @@ window.setTimeout(broadcastStep, 100);
 document.addEventListener("keydown", event => { keysDown.addAsSet(event.key);    if (usedKeys.includes(event.key)) { event.preventDefault() } });
 document.addEventListener("keyup",   event => { keysDown.removeAsSet(event.key); if (usedKeys.includes(event.key)) { event.preventDefault() } });
 
+function stylePlayer(object, elem) {
+  let borderWidth   = object.isBall ? Math.ceil(object.radius / 10) : 2;
+  elem.style.width  = Math.round(object.radius * 2);
+  elem.style.height = Math.round(object.radius * 2);
+  if (object.isBall) {
+    elem.style.boxSizing    = "border-box";
+    elem.style.left         = Math.floor(object.x - object.radius);
+    elem.style.top          = Math.floor(object.y - object.radius);
+    elem.style.border       = "dotted";
+    elem.style.borderColor  = object.isBall ? "black" : object.color;
+    elem.style.borderWidth  = "" + borderWidth + "px";
+    elem.style.borderRadius = "" + Math.round(object.radius - 1) + "px";
+  } else {
+    elem.style.boxSizing    = "content-box";
+    elem.style.left         = Math.floor(object.x - object.radius - borderWidth);
+    elem.style.top          = Math.floor(object.y - object.radius - borderWidth);
+    elem.style.border       = "solid";
+    elem.style.borderColor  = object.isBall ? "white" : object.color;
+    elem.style.borderWidth  = "" + borderWidth + "px";
+    elem.style.borderRadius = "" + Math.round(object.radius + borderWidth - 1) + "px";
+  }
+}
+
 function tick() {
   gameStep();
 
   for (peerName in peers) {
     if (peerName in gameState.objects) {
       if (peers[peerName].vidElem) {
-        peers[peerName].vidElem.style.left        = Math.floor(gameState.objects[peerName].x - miniFaceSize / 2);
-        peers[peerName].vidElem.style.top         = Math.floor(gameState.objects[peerName].y - miniFaceSize / 2);
-        peers[peerName].vidElem.style.borderColor = gameState.objects[peerName].color;
+        stylePlayer(gameState.objects[peerName], peers[peerName].vidElem);
+        // peers[peerName].vidElem.style.left        = Math.floor(gameState.objects[peerName].x - miniFaceSize / 2);
+        // peers[peerName].vidElem.style.top         = Math.floor(gameState.objects[peerName].y - miniFaceSize / 2);
+        // peers[peerName].vidElem.style.borderColor = gameState.objects[peerName].color;
       }
     }
   }
-  myFaceCanvas.style.left = Math.floor(me.x - miniFaceSize / 2);
-  myFaceCanvas.style.top  = Math.floor(me.y - miniFaceSize / 2);
+  stylePlayer(me, myFaceCanvas);
+  // myFaceCanvas.style.left = Math.floor(me.x - miniFaceSize / 2);
+  // myFaceCanvas.style.top  = Math.floor(me.y - miniFaceSize / 2);
 
-  ballElem.style.left = Math.floor(ball.x - ball.radius);
-  ballElem.style.top  = Math.floor(ball.y - ball.radius);
+  let ball = gameState.objects.ball;
+  if (!ball.disabled) {
+    ballElem.style.display = "inline-block";
+    ballElem.style.left = Math.floor(ball.x - ball.radius);
+    ballElem.style.top  = Math.floor(ball.y - ball.radius);
+  } else {
+    ballElem.style.display = "none";
+    ballElem.style.left = Math.floor(ball.x - ball.radius);
+    ballElem.style.top  = Math.floor(ball.y - ball.radius);
+  }
 
   requestAnimationFrame(tick);
 }
@@ -308,7 +389,11 @@ requestAnimationFrame(tick);
 window.addEventListener('DOMContentLoaded', (event) => {
   let colors = ["black", "#ddd", "blue", "#a0a", "maroon", "#e70", "#cc0", "#0a0", "#0cc"];
 
-  let colorPicker = document.createElement('p');
+  let controls = document.createElement('p');
+
+  let colorPicker = document.createElement('span');
+
+  // colorPicker.style.display = "inline-block";
 
   let restyleSwatches = () => {
     colorPicker.childNodes.forEach(swatch => {
@@ -339,5 +424,27 @@ window.addEventListener('DOMContentLoaded', (event) => {
   });
   restyleSwatches();
 
-  gameDiv.after(colorPicker);
+  gameDiv.after(controls);
+
+  controls.appendChild(colorPicker);
+
+  let ballButton = document.createElement('button');
+  ballButton.innerText = "I'm the ball!"
+  ballButton.style.verticalAlign = "super";
+
+  ballButton.addEventListener('click', event => {
+    if ( me.isBall ) {
+      me.isBall = false;
+      me.radius = gameState.constants.playerRadius;
+      me.mass   = gameState.constants.playerMass;
+      ballButton.innerText = "I'm the ball!"
+    } else {
+      me.isBall = true;
+      me.glide  = defaultBallParams.glide;
+      me.radius = gameState.constants.playerAsBallRadius;
+      ballButton.innerText = "I'm not the ball!"
+    }
+  });
+
+  controls.appendChild(ballButton);
 });
