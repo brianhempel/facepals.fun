@@ -23,7 +23,7 @@ let defaultConstants = {
   objectSpringConstant : 200,
   networkFPS           : 30,
   maxForce             : 2000,
-  onFireSoundLevel     : 0.2,
+  onFireSoundLevel     : 0.25,
   onFireBoost          : 1.5,
 }
 
