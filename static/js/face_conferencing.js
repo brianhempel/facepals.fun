@@ -437,14 +437,14 @@ let soundLevelsRingBuffer = Array(10).fill(0); /* 10 * 2048 = 20480 ~ half a sec
 var soundLevelsRingI      = 0;
 // let soundLevelElem        = document.getElementById("soundLevel");
 // let soundMinElem          = document.getElementById("soundMin");
-var threeEightsSecMeanSoundLevel = 0;
-var threeEightsSecMinSoundLevel  = 0;
+var quarterSecondMeanSoundLevel = 0;
+var quarterSecondMinSoundLevel  = 0;
 // START HERE hook up to game. (Players shake when grrring.)
 
 function setupSoundMeter(stream) {
   let context = new AudioContext();
   let source = context.createMediaStreamSource(stream);
-  let processor = context.createScriptProcessor(1536, 1, 1);
+  let processor = context.createScriptProcessor(1024, 1, 1);
 
   source.connect(context.destination);
   source.connect(processor);
@@ -463,11 +463,11 @@ function setupSoundMeter(stream) {
   };
 
   let updateLevels = () => {
-    threeEightsSecMeanSoundLevel = soundLevelsRingBuffer.reduce( (a, b) => a + b ) / soundLevelsRingBuffer.length;
-    threeEightsSecMinSoundLevel  = soundLevelsRingBuffer.reduce( (a, b) => Math.min(a,b) );
+    quarterSecondMeanSoundLevel = soundLevelsRingBuffer.reduce( (a, b) => a + b ) / soundLevelsRingBuffer.length;
+    quarterSecondMinSoundLevel  = soundLevelsRingBuffer.reduce( (a, b) => Math.min(a,b) );
 
-    // soundLevelElem.innerText = "" + threeEightsSecMeanSoundLevel;
-    // soundMinElem.innerText = "" + threeEightsSecMinSoundLevel;
+    // soundLevelElem.innerText = "" + quarterSecondMeanSoundLevel;
+    // soundMinElem.innerText = "" + quarterSecondMinSoundLevel;
 
     window.setTimeout(updateLevels, 50);
   }
