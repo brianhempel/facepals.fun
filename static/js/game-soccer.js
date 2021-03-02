@@ -160,11 +160,18 @@ function gameStep() {
       me.glide = constants.playerGlideIdle;
     }
   } else {
-    me.vy     += intendedVy * constants.playerAsBallAccel * dt;
     me.radius  = Math.max(5, me.radius + intendedVx);
     me.mass    = defaultBallParams.mass * me.radius * me.radius / (constants.playerAsBallRadius * constants.playerAsBallRadius);
     me.glide   = defaultBallParams.glide;
-    console.log(me);
+    if (intendedVy == 1) {
+      me.glide *= 0.01;
+    } else if (intendedVy == -1 && (me.vx*me.vx + me.vy*me.vy > 1)) {
+      let heading = atan2(me.vy, me.vx);
+      let acceleration = constants.playerAccelMoving * 0.5;
+      me.vx += cos(heading) * acceleration * dt;
+      me.vy += sin(heading) * acceleration * dt;
+    }
+    // console.log(me);
   }
 
   let objects = gameState.objects;
