@@ -433,18 +433,19 @@ function askForFaceDetection() {
 // // necessary to make sample run, but should not be.
 // this.script.connect(this.context.destination);
 
-let soundLevelsRingBuffer = Array(10).fill(0); /* 10 * 2048 = 20480 ~ half a second */
+let soundLevelsRingBuffer = Array(20).fill(0); /* 10 * 2048 = 20480 ~ half a second */
 var soundLevelsRingI      = 0;
 // let soundLevelElem        = document.getElementById("soundLevel");
 // let soundMinElem          = document.getElementById("soundMin");
 var quarterSecondMeanSoundLevel = 0;
 var quarterSecondMinSoundLevel  = 0;
+var quarterSecondMaxSoundLevel  = 0;
 // START HERE hook up to game. (Players shake when grrring.)
 
 function setupSoundMeter(stream) {
   let context = new AudioContext();
   let source = context.createMediaStreamSource(stream);
-  let processor = context.createScriptProcessor(1024, 1, 1);
+  let processor = context.createScriptProcessor(512, 1, 1);
 
   source.connect(context.destination);
   source.connect(processor);
@@ -465,6 +466,7 @@ function setupSoundMeter(stream) {
   let updateLevels = () => {
     quarterSecondMeanSoundLevel = soundLevelsRingBuffer.reduce( (a, b) => a + b ) / soundLevelsRingBuffer.length;
     quarterSecondMinSoundLevel  = soundLevelsRingBuffer.reduce( (a, b) => Math.min(a,b) );
+    quarterSecondMaxSoundLevel  = soundLevelsRingBuffer.reduce( (a, b) => Math.max(a,b) );
 
     // soundLevelElem.innerText = "" + quarterSecondMeanSoundLevel;
     // soundMinElem.innerText = "" + quarterSecondMinSoundLevel;

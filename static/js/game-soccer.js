@@ -24,7 +24,8 @@ let defaultConstants = {
   networkFPS           : 30,
   maxForce             : 2000,
   onFireSoundLevel     : 0.25,
-  onFireBoost          : 1.5,
+  onFireTransientLevel : 0.55,
+  onFireBoost          : 2,
 }
 
 let defaultBallParams = {
@@ -150,10 +151,10 @@ function gameStep() {
   if (keysDown.includes("ArrowUp")    || keysDown.includes("w")) { intendedVy -= 1 };
 
   var onFireMultiplier;
-  if (quarterSecondMinSoundLevel > constants.onFireSoundLevel) {
+  if (quarterSecondMinSoundLevel > constants.onFireSoundLevel || quarterSecondMaxSoundLevel > constants.onFireTransientLevel) {
     me.onFire = true;
-    // 1.5-3x boost.
-    onFireMultiplier = constants.onFireBoost + constants.onFireBoost * (quarterSecondMeanSoundLevel - constants.onFireSoundLevel)/(1 - constants.onFireSoundLevel)
+    // 2-4x boost.
+    onFireMultiplier = constants.onFireBoost + constants.onFireBoost * quarterSecondMaxSoundLevel
   } else {
     me.onFire = false;
     onFireMultiplier = 1.0;
