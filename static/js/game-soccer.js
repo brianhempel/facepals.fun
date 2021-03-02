@@ -435,7 +435,6 @@ window.addEventListener('DOMContentLoaded', (event) => {
     swatch.style.display = "inline-block";
     swatch.style.width = "55px";
     swatch.style.height = "30px";
-    swatch.style.margin = "0 8px";
     swatch.style.cursor = "pointer";
     swatch.style.border = "5px solid transparent";
     swatch.onclick = function (event) {
@@ -454,6 +453,7 @@ window.addEventListener('DOMContentLoaded', (event) => {
 
   let ballButton = document.createElement('button');
   ballButton.innerText = "I'm the ball!"
+  ballButton.style.margin = "0 1em";
   ballButton.style.verticalAlign = "super";
 
   ballButton.addEventListener('click', event => {
