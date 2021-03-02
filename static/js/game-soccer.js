@@ -44,6 +44,7 @@ ballElem.width          = 2 * defaultBallParams.radius;
 ballElem.height         = 2 * defaultBallParams.radius;
 ballElem.style.position = "absolute";
 gameDiv.appendChild(ballElem);
+let ballOverlayElems    = {};
 
 function makePole(x, y) {
   let pole                       = {x : x, y : y, vx : 0, vy : 0, glide : 0, radius : miniFaceSize / 8, mass : 1000000};
@@ -330,26 +331,42 @@ window.setTimeout(broadcastStep, 100);
 document.addEventListener("keydown", event => { keysDown.addAsSet(event.key);    if (usedKeys.includes(event.key)) { event.preventDefault() } });
 document.addEventListener("keyup",   event => { keysDown.removeAsSet(event.key); if (usedKeys.includes(event.key)) { event.preventDefault() } });
 
-function stylePlayer(object, elem) {
-  let borderWidth   = object.isBall ? Math.ceil(object.radius / 10) : 2;
+function stylePlayer(peerName, object, elem) {
+  let borderWidth   = object.isBall ? Math.ceil(object.radius / 25) : 2;
   elem.style.width  = Math.round(object.radius * 2);
   elem.style.height = Math.round(object.radius * 2);
   if (object.isBall) {
-    elem.style.boxSizing    = "border-box";
-    elem.style.left         = Math.floor(object.x - object.radius);
-    elem.style.top          = Math.floor(object.y - object.radius);
-    elem.style.border       = "dotted";
-    elem.style.borderColor  = object.isBall ? "black" : object.color;
-    elem.style.borderWidth  = "" + borderWidth + "px";
-    elem.style.borderRadius = "" + Math.round(object.radius - 1) + "px";
+    elem.style.boxSizing      = "border-box";
+    elem.style.left           = Math.floor(object.x - object.radius);
+    elem.style.top            = Math.floor(object.y - object.radius);
+    elem.style.border         = "solid";
+    elem.style.borderColor    = "black";
+    elem.style.borderWidth    = "" + borderWidth + "px";
+    elem.style.borderRadius   = "" + Math.round(object.radius - 1) + "px";
+    if (!ballOverlayElems[peerName]) {
+      ballOverlayElems[peerName]                = document.createElement("img");
+      ballOverlayElems[peerName].src            = "/static/playerBallOverlay.png"
+      ballOverlayElems[peerName].style.position = "absolute";
+      // ballOverlayElems[peerName].style.opacity  = "0.33";
+      elem.after(ballOverlayElems[peerName]);
+    }
+    let overlayElem           = ballOverlayElems[peerName];
+    overlayElem.style.display = "inline-block";
+    overlayElem.style.width   = elem.style.width;
+    overlayElem.style.height  = elem.style.height;
+    overlayElem.style.left    = elem.style.left;
+    overlayElem.style.top     = elem.style.top;
   } else {
     elem.style.boxSizing    = "content-box";
     elem.style.left         = Math.floor(object.x - object.radius - borderWidth);
     elem.style.top          = Math.floor(object.y - object.radius - borderWidth);
     elem.style.border       = "solid";
-    elem.style.borderColor  = object.isBall ? "white" : object.color;
+    elem.style.borderColor  = object.color;
     elem.style.borderWidth  = "" + borderWidth + "px";
     elem.style.borderRadius = "" + Math.round(object.radius + borderWidth - 1) + "px";
+    if (ballOverlayElems[peerName]) {
+      ballOverlayElems[peerName].style.display = "none";
+    }
   }
 }
 
@@ -359,14 +376,14 @@ function tick() {
   for (peerName in peers) {
     if (peerName in gameState.objects) {
       if (peers[peerName].vidElem) {
-        stylePlayer(gameState.objects[peerName], peers[peerName].vidElem);
+        stylePlayer(peerName, gameState.objects[peerName], peers[peerName].vidElem);
         // peers[peerName].vidElem.style.left        = Math.floor(gameState.objects[peerName].x - miniFaceSize / 2);
         // peers[peerName].vidElem.style.top         = Math.floor(gameState.objects[peerName].y - miniFaceSize / 2);
         // peers[peerName].vidElem.style.borderColor = gameState.objects[peerName].color;
       }
     }
   }
-  stylePlayer(me, myFaceCanvas);
+  stylePlayer("me", me, myFaceCanvas);
   // myFaceCanvas.style.left = Math.floor(me.x - miniFaceSize / 2);
   // myFaceCanvas.style.top  = Math.floor(me.y - miniFaceSize / 2);
 
