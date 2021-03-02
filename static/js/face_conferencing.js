@@ -428,6 +428,53 @@ function askForFaceDetection() {
 }
 
 
+// this.mic = this.context.createMediaStreamSource(stream);
+// this.mic.connect(this.script);
+// // necessary to make sample run, but should not be.
+// this.script.connect(this.context.destination);
+
+let soundLevelsRingBuffer = Array(10).fill(0); /* 10 * 2048 = 20480 ~ half a second */
+var soundLevelsRingI      = 0;
+// let soundLevelElem        = document.getElementById("soundLevel");
+// let soundMinElem          = document.getElementById("soundMin");
+var quarterSecondMeanSoundLevel = 0;
+var quarterSecondMinSoundLevel  = 0;
+// START HERE hook up to game. (Players shake when grrring.)
+
+function setupSoundMeter(stream) {
+  let context = new AudioContext();
+  let source = context.createMediaStreamSource(stream);
+  let processor = context.createScriptProcessor(1024, 1, 1);
+
+  source.connect(context.destination);
+  source.connect(processor);
+  processor.connect(context.destination);
+  processor.onaudioprocess = function (event) {
+    let samples     = event.inputBuffer.getChannelData(0);
+    let sampleCount = samples.length;
+    let total       = 0;
+
+    for (var i = 0; i < sampleCount; i++) {
+      total += Math.abs(samples[i]);
+    }
+
+    soundLevelsRingBuffer[soundLevelsRingI] = Math.sqrt(total / sampleCount);
+    soundLevelsRingI = (soundLevelsRingI + 1) % soundLevelsRingBuffer.length;
+  };
+
+  let updateLevels = () => {
+    quarterSecondMeanSoundLevel = soundLevelsRingBuffer.reduce( (a, b) => a + b ) / soundLevelsRingBuffer.length;
+    quarterSecondMinSoundLevel  = soundLevelsRingBuffer.reduce( (a, b) => Math.min(a,b) );
+
+    // soundLevelElem.innerText = "" + quarterSecondMeanSoundLevel;
+    // soundMinElem.innerText = "" + quarterSecondMinSoundLevel;
+
+    window.setTimeout(updateLevels, 50);
+  }
+  window.setTimeout(updateLevels, 50);
+}
+
+
 window.addEventListener('DOMContentLoaded', (event) => {
   document.querySelectorAll("a.inviteLink").forEach(elem => {
     elem.href      = window.location.href;
@@ -482,6 +529,9 @@ window.addEventListener('DOMContentLoaded', (event) => {
       targetFaceSize            = faceSize;
       console.log(stream.getVideoTracks()[0].getSettings())
       console.log(stream.getAudioTracks()[0].getSettings())
+
+      setupSoundMeter(stream);
+
       myVid.play();
     }).catch(e => console.error('getUserMedia: ', e));
 });

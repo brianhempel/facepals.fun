@@ -23,6 +23,8 @@ let defaultConstants = {
   objectSpringConstant : 200,
   networkFPS           : 30,
   maxForce             : 2000,
+  onFireSoundLevel     : 0.2,
+  onFireBoost          : 1.5,
 }
 
 let defaultBallParams = {
@@ -37,7 +39,7 @@ let defaultBallParams = {
 }
 
 
-let me                  = {x : Math.random() * gameW, y : -50, vx : 0, vy : 0, glide : defaultConstants.playerGlideIdle, radius : defaultConstants.playerRadius, mass : defaultConstants.playerMass, color: "black", isBall : false};
+let me                  = {x : Math.random() * gameW, y : -50, vx : 0, vy : 0, glide : defaultConstants.playerGlideIdle, radius : defaultConstants.playerRadius, mass : defaultConstants.playerMass, color: "black", isBall : false, onFire: false};
 let ballElem            = document.createElement('img');
 ballElem.src            = "/static/ball.png"
 ballElem.width          = 2 * defaultBallParams.radius;
@@ -147,10 +149,19 @@ function gameStep() {
   if (keysDown.includes("ArrowRight") || keysDown.includes("d")) { intendedVx += 1 };
   if (keysDown.includes("ArrowUp")    || keysDown.includes("w")) { intendedVy -= 1 };
 
+  var onFireMultiplier;
+  if (quarterSecondMinSoundLevel > constants.onFireSoundLevel) {
+    me.onFire = true;
+    // 1.5-3x boost.
+    onFireMultiplier = constants.onFireBoost + constants.onFireBoost * (quarterSecondMeanSoundLevel - constants.onFireSoundLevel)/(1 - constants.onFireSoundLevel)
+  } else {
+    me.onFire = false;
+    onFireMultiplier = 1.0;
+  }
 
   if (!me.isBall) {
     let intendedHeading = atan2(intendedVy, intendedVx);
-    let acceleration = constants.playerAccelMoving;
+    let acceleration = constants.playerAccelMoving * onFireMultiplier;
 
     if (intendedVx != 0 || intendedVy != 0) {
       me.vx += cos(intendedHeading) * acceleration * dt;
@@ -167,7 +178,7 @@ function gameStep() {
       me.glide *= 0.01;
     } else if (intendedVy == -1 && (me.vx*me.vx + me.vy*me.vy > 1)) {
       let heading = atan2(me.vy, me.vx);
-      let acceleration = constants.playerAccelMoving * 0.5;
+      let acceleration = constants.playerAccelMoving * 0.5 * onFireMultiplier;
       me.vx += cos(heading) * acceleration * dt;
       me.vy += sin(heading) * acceleration * dt;
     }
@@ -294,7 +305,7 @@ function gameConstantsMatch(gc1, gc2) {
 function broadcastStep() {
 
   // Send self, but with more glide for better intra-update prediction.
-  let update = { objects: { me: {x : me.x, y : me.y, vx : me.vx, vy : me.vy, glide : (me.glide == gameState.constants.playerGlideMoving ? 1.0 : me.glide), radius : me.radius, mass : me.mass, color : me.color, isBall : me.isBall} } };
+  let update = { objects: { me: {x : me.x, y : me.y, vx : me.vx, vy : me.vy, glide : (me.glide == gameState.constants.playerGlideMoving ? 1.0 : me.glide), radius : me.radius, mass : me.mass, color : me.color, isBall : me.isBall, onFire: me.onFire} } };
   let ball = gameState.objects.ball;
 
   if (ball.disabled) {
@@ -342,10 +353,18 @@ function stylePlayer(peerName, object, elem) {
   let borderWidth   = object.isBall ? Math.ceil(object.radius / 25) : 2;
   elem.style.width  = Math.round(object.radius * 2);
   elem.style.height = Math.round(object.radius * 2);
+
+  var shakeX = 0;
+  var shakeY = 0;
+  if (object.onFire) {
+    shakeX = (-1 + 2*Math.random()) * object.radius / 10;
+    shakeY = (-1 + 2*Math.random()) * object.radius / 10;
+  }
+
   if (object.isBall) {
     elem.style.boxSizing      = "border-box";
-    elem.style.left           = Math.floor(object.x - object.radius);
-    elem.style.top            = Math.floor(object.y - object.radius);
+    elem.style.left           = Math.floor(object.x - object.radius + shakeX);
+    elem.style.top            = Math.floor(object.y - object.radius + shakeY);
     elem.style.border         = "solid";
     elem.style.borderColor    = "black";
     elem.style.borderWidth    = "" + borderWidth + "px";
@@ -365,8 +384,8 @@ function stylePlayer(peerName, object, elem) {
     overlayElem.style.top     = elem.style.top;
   } else {
     elem.style.boxSizing    = "content-box";
-    elem.style.left         = Math.floor(object.x - object.radius - borderWidth);
-    elem.style.top          = Math.floor(object.y - object.radius - borderWidth);
+    elem.style.left         = Math.floor(object.x - object.radius - borderWidth + shakeX);
+    elem.style.top          = Math.floor(object.y - object.radius - borderWidth + shakeY);
     elem.style.border       = "solid";
     elem.style.borderColor  = object.color;
     elem.style.borderWidth  = "" + borderWidth + "px";
@@ -452,7 +471,7 @@ window.addEventListener('DOMContentLoaded', (event) => {
   controls.appendChild(colorPicker);
 
   let ballButton = document.createElement('button');
-  ballButton.innerText = "I'm the ball!"
+  ballButton.innerText = "I'm the ball!";
   ballButton.style.margin = "0 1em";
   ballButton.style.verticalAlign = "super";
 
@@ -471,4 +490,9 @@ window.addEventListener('DOMContentLoaded', (event) => {
   });
 
   controls.appendChild(ballButton);
+
+  let grrrr = document.createElement('span');
+  grrrr.innerText = '"Grrrr!"';
+  grrrr.style.verticalAlign = "super";
+  controls.appendChild(grrrr);
 });
