@@ -447,7 +447,6 @@ function setupSoundMeter(stream) {
   let source = context.createMediaStreamSource(stream);
   let processor = context.createScriptProcessor(512, 1, 1);
 
-  source.connect(context.destination);
   source.connect(processor);
   processor.connect(context.destination);
   processor.onaudioprocess = function (event) {
