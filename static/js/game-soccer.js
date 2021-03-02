@@ -150,10 +150,10 @@ function gameStep() {
   if (keysDown.includes("ArrowUp")    || keysDown.includes("w")) { intendedVy -= 1 };
 
   var onFireMultiplier;
-  if (quarterSecondMinSoundLevel > constants.onFireSoundLevel) {
+  if (threeEightsSecMinSoundLevel > constants.onFireSoundLevel) {
     me.onFire = true;
     // 1.5-3x boost.
-    onFireMultiplier = constants.onFireBoost + constants.onFireBoost * (quarterSecondMeanSoundLevel - constants.onFireSoundLevel)/(1 - constants.onFireSoundLevel)
+    onFireMultiplier = constants.onFireBoost + constants.onFireBoost * (threeEightsSecMeanSoundLevel - constants.onFireSoundLevel)/(1 - constants.onFireSoundLevel)
   } else {
     me.onFire = false;
     onFireMultiplier = 1.0;
