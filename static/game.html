@@ -2,6 +2,8 @@
   <head>
     <title>Face Pals</title>
     <link href="/static/styles.css" rel="stylesheet"/>
+    <link rel="preload" as="script" href="/static/js/opencv.js" onload="window.opencvDownloaded = true">
+    <link rel="preload" as="fetch" href="/static/haarcascade_frontalface_default.xml">
   </head>
   <body>
     <h1>Face Pals</h1>
@@ -9,6 +11,7 @@
     <div id="gameDiv" style="position: relative;">
       <canvas id="myFaceCanvas" style="position: absolute"></canvas>
       <video id="myVid" muted style="display: none"></video>
+      <div id="loading">Loading...</div>
     </div>
     <!-- <p>Level <span id="soundLevel"></span></p> -->
     <!-- <p>Min <span id="soundMin"></span></p> -->

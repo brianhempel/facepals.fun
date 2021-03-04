@@ -38,3 +38,13 @@ form button {
 canvas, video {
   background-color: white;
 }
+
+#loading {
+  width: 100%;
+  height: 100%;
+  text-align: center;
+  line-height: 720px;
+  z-index: 1000;
+  position: absolute;
+  background-color: rgba(128,128,128,0.5);
+}

@@ -2,6 +2,7 @@ let myVid           = document.getElementById('myVid');
 let myVidCanvas     = document.createElement('canvas');
 var myVidCanvasCtx;
 let myFaceCanvas    = document.getElementById('myFaceCanvas');
+let loadingElem     = document.getElementById('loading');
 // let miniFaceSize    = 64;
 let miniFaceSize    = 80;
 myFaceCanvas.width  = miniFaceSize;
@@ -395,25 +396,32 @@ function removePeer(peerName) {
   }
 }
 
+// window.opencvDownloaded
+function setupOpenCV() {
+  if (window.opencvDownloaded) {
+    window.faceDetectionWorker = new Worker("/static/js/face_detection_worker.js");
+    window.faceDetectionWorker.addEventListener("message", ({ data }) => {
+      // console.log(data);
+      if (data.type === "ready") {
+        askForFaceDetection();
+      } else if (data.type === "faceLocation") {
 
-faceDetectionWorker = new Worker("/static/js/face_detection_worker.js");
-faceDetectionWorker.addEventListener("message", ({ data }) => {
-  // console.log(data);
-  if (data.type === "ready") {
-    askForFaceDetection();
-  } else if (data.type === "faceLocation") {
+        targetFaceCX    = data.location.faceCX;
+        targetFaceCY    = data.location.faceCY;
+        targetFaceSize  = data.location.faceSize;
 
-    targetFaceCX    = data.location.faceCX;
-    targetFaceCY    = data.location.faceCY;
-    targetFaceSize  = data.location.faceSize;
-
-    window.setTimeout(askForFaceDetection, 0.2*1000);
-  } else if (data.type === "noFace") {
-    window.setTimeout(askForFaceDetection, 0.2*1000);
-  } else if (data.type === "error") {
-    window.setTimeout(askForFaceDetection, 5*1000);
+        window.setTimeout(askForFaceDetection, 0.2*1000);
+      } else if (data.type === "noFace") {
+        window.setTimeout(askForFaceDetection, 0.2*1000);
+      } else if (data.type === "error") {
+        window.setTimeout(askForFaceDetection, 5*1000);
+      }
+    });
+  } else {
+    window.setTimeout(setupOpenCV, 50);
   }
-});
+}
+
 
 function askForFaceDetection() {
   if (!myVid.paused) {
@@ -475,6 +483,41 @@ function setupSoundMeter(stream) {
   window.setTimeout(updateLevels, 50);
 }
 
+function waitForOpenCVThenGo() {
+  if (window.opencvDownloaded) {
+    loadingElem.remove();
+
+    navigator.mediaDevices
+    .getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: 1 }, video: { width: 384, height: 288 } })
+    .then(stream => {
+      myVidStream               = stream;
+      myWidth                   = stream.getVideoTracks()[0].getSettings().width;
+      myHeight                  = stream.getVideoTracks()[0].getSettings().height;
+      myVid.width               = myWidth;
+      myVid.height              = myHeight;
+      myVid.srcObject           = stream;
+      myVidCanvas.width         = myWidth;
+      myVidCanvas.height        = myHeight;
+      myVidCanvas.style.display = 'none';
+      document.body.appendChild(myVidCanvas);
+      myVidCanvasCtx            = myVidCanvas.getContext('2d');
+      faceCX                    = myWidth / 2;
+      faceCY                    = myHeight / 2;
+      faceSize                  = Math.min(myWidth, myHeight);
+      targetFaceCX              = faceCX;
+      targetFaceCY              = faceCY;
+      targetFaceSize            = faceSize;
+      console.log(stream.getVideoTracks()[0].getSettings())
+      console.log(stream.getAudioTracks()[0].getSettings())
+
+      setupSoundMeter(stream);
+
+      myVid.play();
+    }).catch(e => console.error('getUserMedia: ', e));
+  } else {
+    window.setTimeout(waitForOpenCVThenGo, 50);
+  }
+}
 
 window.addEventListener('DOMContentLoaded', (event) => {
   document.querySelectorAll("a.inviteLink").forEach(elem => {
@@ -508,32 +551,7 @@ window.addEventListener('DOMContentLoaded', (event) => {
     acquirePeerName();
   });
 
-  navigator.mediaDevices
-    .getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: 1 }, video: { width: 384, height: 288 } })
-    .then(stream => {
-      myVidStream               = stream;
-      myWidth                   = stream.getVideoTracks()[0].getSettings().width;
-      myHeight                  = stream.getVideoTracks()[0].getSettings().height;
-      myVid.width               = myWidth;
-      myVid.height              = myHeight;
-      myVid.srcObject           = stream;
-      myVidCanvas.width         = myWidth;
-      myVidCanvas.height        = myHeight;
-      myVidCanvas.style.display = 'none';
-      document.body.appendChild(myVidCanvas);
-      myVidCanvasCtx            = myVidCanvas.getContext('2d');
-      faceCX                    = myWidth / 2;
-      faceCY                    = myHeight / 2;
-      faceSize                  = Math.min(myWidth, myHeight);
-      targetFaceCX              = faceCX;
-      targetFaceCY              = faceCY;
-      targetFaceSize            = faceSize;
-      console.log(stream.getVideoTracks()[0].getSettings())
-      console.log(stream.getAudioTracks()[0].getSettings())
-
-      setupSoundMeter(stream);
-
-      myVid.play();
-    }).catch(e => console.error('getUserMedia: ', e));
+  setupOpenCV();
+  waitForOpenCVThenGo();
 });
 
