@@ -189,10 +189,15 @@ let list_ice_candidate_ids req =
   let sending_peer_name = Router.param req "sending_peer_name" in
   let candidates_dir_path = Core.Filename.of_parts ["rooms"; room_name; "peers"; target_peer_name; "ice_candidates"; sending_peer_name] in
   let open Lwt.Syntax in
-  let* ice_candidate_ids = names_in_dir candidates_dir_path in
-  let ice_candidate_ids = ice_candidate_ids |> List.sort (fun name1 name2 -> Int.compare (int_of_string name1) (int_of_string name2)) in
-  Response.of_json (`Assoc [ "ice_candidate_ids", `List (List.map (fun name -> `String name) ice_candidate_ids) ])
-  |> Lwt.return
+  let* path_exists = Lwt_unix.file_exists candidates_dir_path in
+  if path_exists then
+    let* ice_candidate_ids = names_in_dir candidates_dir_path in
+    let ice_candidate_ids = ice_candidate_ids |> List.sort (fun name1 name2 -> Int.compare (int_of_string name1) (int_of_string name2)) in
+    Response.of_json (`Assoc [ "ice_candidate_ids", `List (List.map (fun name -> `String name) ice_candidate_ids) ])
+    |> Lwt.return
+  else
+    Response.of_plain_text ~status:`Not_found "Not found"
+    |> Lwt.return
 
 let get_ice_candidate req =
   let room_name = Router.param req "room_name" in

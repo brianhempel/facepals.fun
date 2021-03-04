@@ -3,6 +3,8 @@ let myVidCanvas     = document.createElement('canvas');
 var myVidCanvasCtx;
 let myFaceCanvas    = document.getElementById('myFaceCanvas');
 let loadingElem     = document.getElementById('loading');
+let debugInfoButton = document.getElementById('debugInfoButton');
+let debugInfoElem   = document.getElementById('debugInfo');
 // let miniFaceSize    = 64;
 let miniFaceSize    = 80;
 myFaceCanvas.width  = miniFaceSize;
@@ -17,6 +19,9 @@ var myFaceStream;
 var myPeerName;
 var roomName        = window.location.href.match(/\/rooms\/([A-Za-z0-9'_!\-]+)/)[1];
 var peers           = {};
+var iceLog          = "";
+
+
 
 // baseline idle 73.8
 // no showing vid / face canvase 77.1
@@ -129,15 +134,18 @@ function pollForAnswerFrom(peerName) {
 function makeOnIceCandidateHandler(peerName) {
   let sendIceCandidate = candidateJson => {
     console.log(candidateJson);
+    let jsonStr = JSON.stringify(candidateJson);
+    iceLog += "To " + peerName + " sending ICE candidate " + jsonStr + "\n";
     fetch('/rooms/' + roomName + '/peers/' + peerName + '/ice_candidates/' + myPeerName, {
       method: 'POST',
-      body: JSON.stringify(candidateJson),
+      body: jsonStr,
       headers: { 'Content-Type': 'application/json' }
     })
     .then(resp => resp.ok ? resp :  Promise.reject(resp))
     .catch(err => {
       console.error('Error sending ICE candidate to ' + peerName, err);
       window.setTimeout(() => sendIceCandidate(candidateJson), 500);
+      iceLog += "To " + peerName + " ERROR sending ICE candidate (" + jsonStr + ")\n";
     });
   };
   return function (event) {
@@ -197,12 +205,19 @@ function getIceCandidateData(peerName, candidateId) {
     return;
   }
 
+  iceLog += "From " + peerName + " getting ICE candidate " + candidateId + "\n";
   fetch('/rooms/' + roomName + '/peers/' + myPeerName + '/ice_candidates/' + peerName + '/' + candidateId)
   .then(resp => resp.ok ? resp.json() :  Promise.reject(resp))
   .then(data => {
-    peers[peerName].peerConn.addIceCandidate(data);
+    iceLog += "From " + peerName + " got ICE candidate " + candidateId + " (" + JSON.stringify(data) + ")\n";
+    peers[peerName].peerConn.addIceCandidate(data).catch(err => {
+      console.log("addIceCandidate() failure  " + err.name + " from " + peerName, err, data);
+      iceLog += "From " + peerName + " ERROR  " + err.name + " on addIceCandidate() " + candidateId + " (" + JSON.stringify(data) + ")\n";
+    });
+    iceLog += "To " + peerName + " ICE state " + peers[peerName].peerConn.iceConnectionState + "\n";
   }).catch(err => {
     console.error("Error getting ice candidate " + candidateId + " from " + peerName, err);
+    iceLog += "From " + peerName + " ERROR getting ICE candidate " + candidateId + "\n";
     window.setTimeout(() => getIceCandidateData(peerName, candidateId, 500));
   });
 }
@@ -519,7 +534,41 @@ function waitForOpenCVThenGo() {
   }
 }
 
+function updateDebugInfo() {
+  var debugText = "";
+
+  debugText += "ICE connection states:\n";
+  for (const peerName in peers) {
+    if (peers[peerName].peerConn) {
+      debugText += peerName + ": " + peers[peerName].peerConn.iceConnectionState + "\n";
+    }
+  }
+
+  debugText += "\n";
+  debugText += "ICE log:\n";
+  debugText += iceLog;
+
+  debugInfoElem.innerText = debugText;
+
+  if (debugInfo.style.display === "block") {
+    window.setTimeout(updateDebugInfo, 1000);
+  }
+}
+
 window.addEventListener('DOMContentLoaded', (event) => {
+  debugInfo.style.display = "none";
+
+  debugInfoButton.addEventListener("click", event => {
+    if (debugInfo.style.display === "none") {
+      debugInfo.style.display = "block";
+      debugInfoButton.innerText = "Hide Debug Info";
+      updateDebugInfo();
+    } else {
+      debugInfo.style.display = "none";
+      debugInfoButton.innerText = "Show Debug Info";
+    }
+  });
+
   document.querySelectorAll("a.inviteLink").forEach(elem => {
     elem.href      = window.location.href;
     elem.innerHTML = elem.href;
