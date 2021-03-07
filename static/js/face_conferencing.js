@@ -123,7 +123,7 @@ function pollForAnswerFrom(peerName) {
     console.log('Got answer from ' + peerName);
     peers[peerName].status = 'connected'
     peers[peerName].peerConn.ontrack = makeOnTrackHandler(peerName);
-    window.setTimeout(() => pollForIceCandidates(peerName, 200), 200);
+    window.setTimeout(() => pollForIceCandidates(peerName, 100), 100);
     peers[peerName].peerConn.setRemoteDescription(new RTCSessionDescription(data));
   }).catch(err => {
     console.log('Waiting for answer from ' + peerName, err);
@@ -135,7 +135,7 @@ function makeOnIceCandidateHandler(peerName) {
   let sendIceCandidate = candidateJson => {
     console.log(candidateJson);
     let jsonStr = JSON.stringify(candidateJson);
-    iceLog += "To " + peerName + " sending ICE candidate " + jsonStr + "\n";
+    iceLog += (new Date()).toISOString() + " To   " + peerName + " sending ICE candidate " + jsonStr + "\n";
     fetch('/rooms/' + roomName + '/peers/' + peerName + '/ice_candidates/' + myPeerName, {
       method: 'POST',
       body: jsonStr,
@@ -145,7 +145,7 @@ function makeOnIceCandidateHandler(peerName) {
     .catch(err => {
       console.error('Error sending ICE candidate to ' + peerName, err);
       window.setTimeout(() => sendIceCandidate(candidateJson), 500);
-      iceLog += "To " + peerName + " ERROR sending ICE candidate (" + jsonStr + ")\n";
+      iceLog += (new Date()).toISOString() + " To   " + peerName + " ERROR sending ICE candidate (" + jsonStr + ")\n";
     });
   };
   return function (event) {
@@ -205,19 +205,21 @@ function getIceCandidateData(peerName, candidateId) {
     return;
   }
 
-  iceLog += "From " + peerName + " getting ICE candidate " + candidateId + "\n";
+  iceLog += (new Date()).toISOString() + " From " + peerName + " getting ICE candidate " + candidateId + "\n";
   fetch('/rooms/' + roomName + '/peers/' + myPeerName + '/ice_candidates/' + peerName + '/' + candidateId)
   .then(resp => resp.ok ? resp.json() :  Promise.reject(resp))
   .then(data => {
-    iceLog += "From " + peerName + " got ICE candidate " + candidateId + " (" + JSON.stringify(data) + ")\n";
-    peers[peerName].peerConn.addIceCandidate(data).catch(err => {
+    iceLog += (new Date()).toISOString() + " From " + peerName + " got ICE candidate " + candidateId + " (" + JSON.stringify(data) + ")\n";
+    peers[peerName].peerConn.addIceCandidate(data).then(() => {
+      // iceLog += (new Date()).toISOString() + "      " + peerName + " ICE state " + peers[peerName].peerConn.iceConnectionState + "\n";
+    }).catch(err => {
       console.log("addIceCandidate() failure  " + err.name + " from " + peerName, err, data);
-      iceLog += "From " + peerName + " ERROR  " + err.name + " on addIceCandidate() " + candidateId + " (" + JSON.stringify(data) + ")\n";
+      iceLog += (new Date()).toISOString() + " From " + peerName + " ERROR  " + err.name + " on addIceCandidate() " + candidateId + " (" + JSON.stringify(data) + ")\n";
+      // iceLog += (new Date()).toISOString() + "      " + peerName + " ICE state " + peers[peerName].peerConn.iceConnectionState + "\n";
     });
-    iceLog += "To " + peerName + " ICE state " + peers[peerName].peerConn.iceConnectionState + "\n";
   }).catch(err => {
     console.error("Error getting ice candidate " + candidateId + " from " + peerName, err);
-    iceLog += "From " + peerName + " ERROR getting ICE candidate " + candidateId + "\n";
+    iceLog += (new Date()).toISOString() + " From " + peerName + " ERROR getting ICE candidate " + candidateId + "\n";
     window.setTimeout(() => getIceCandidateData(peerName, candidateId, 500));
   });
 }
@@ -234,13 +236,15 @@ function pollForIceCandidates(peerName, delayMs) {
   fetch('/rooms/' + roomName + '/peers/' + myPeerName + '/ice_candidates/' + peerName)
   .then(resp => resp.ok ? resp.json() :  Promise.reject(resp))
   .then(data => {
+    var anyNew = false;
     data.ice_candidate_ids.forEach(candidateId => {
       if (!peers[peerName].iceCandidateIdsProcessed.includes(candidateId)) {
+        anyNew = true;
         peers[peerName].iceCandidateIdsProcessed.push(candidateId);
         getIceCandidateData(peerName, candidateId);
       }
     });
-    window.setTimeout(() => pollForIceCandidates(peerName, Math.min(delayMs + 200, 5000)), delayMs)
+    window.setTimeout(() => pollForIceCandidates(peerName, Math.min(anyNew ? delayMs : delayMs + 100, 5000)), delayMs)
   }).catch(err => {
     window.setTimeout(() => pollForIceCandidates(peerName, delayMs), delayMs)
     console.log("Error polling for ice candidate from " + peerName, err);
@@ -266,12 +270,15 @@ function pollForOfferFrom(peerName) {
         peers[peerName].dataChan.onclose   = event => console.log("Channel closed to " + peerName);
       };
       peerConn.onicecandidate  = makeOnIceCandidateHandler(peerName);
+      peerConn.oniceconnectionstatechange = _ => {
+        iceLog += (new Date()).toISOString() + "      " + peerName + " ICE state " + peerConn.iceConnectionState + "\n";
+      };
       peerConn.addTrack(myFaceStream.getVideoTracks()[0], myVidStream);
       peerConn.addTrack(myVidStream.getAudioTracks()[0], myVidStream);
       peers[peerName].peerConn = peerConn;
     }
     peerConn.ontrack = makeOnTrackHandler(peerName);
-    window.setTimeout(() => pollForIceCandidates(peerName, 200), 200);
+    window.setTimeout(() => pollForIceCandidates(peerName, 100), 100);
     peerConn.setRemoteDescription(new RTCSessionDescription(data));
     peerConn.createAnswer()
     .then(localConnDesc => {
@@ -332,6 +339,9 @@ function pollForPeers() {
             dataChan.onclose         = event => console.log("Channel closed to " + peerName);
             peers[peerName].dataChan = dataChan;
             peerConn.onicecandidate = makeOnIceCandidateHandler(peerName);
+            peerConn.oniceconnectionstatechange = _ => {
+              iceLog += (new Date()).toISOString() + "      " + peerName + " ICE state " + peerConn.iceConnectionState + "\n";
+            };
             peerConn.addTrack(myFaceStream.getVideoTracks()[0], myVidStream);
             peerConn.addTrack(myVidStream.getAudioTracks()[0], myVidStream);
             peers[peerName].peerConn = peerConn;
