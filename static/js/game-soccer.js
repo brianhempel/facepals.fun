@@ -19,6 +19,7 @@ let defaultConstants = {
   playerMass           : 1,
   playerAsBallAccel    : 100,
   playerAsBallRadius   : Math.round(miniFaceSize / 3),
+  kickOffAxisGlide     : 0.0005, // Easier dribbling/aiming by reducing ball motion that's off-axis from player motion.
   wallSpringConstant   : 100,
   objectSpringConstant : 200,
   networkFPS           : 30,
@@ -238,6 +239,26 @@ function gameStep() {
             obj1.vy -= clampForce(penetrationDistance * constants.objectSpringConstant * unitDy) * dt / obj1.mass;
             obj2.vx += clampForce(penetrationDistance * constants.objectSpringConstant * unitDx) * dt / obj2.mass;
             obj2.vy += clampForce(penetrationDistance * constants.objectSpringConstant * unitDy) * dt / obj2.mass;
+
+            // "Kick" in direction of motion by slowing down object in off-axis motion
+            if (((key1 === "ball" || obj1.isBall) && !(key2 === "ball" || obj2.isBall)) || ((key2 === "ball" || obj2.isBall) && !(key1 === "ball" || obj1.isBall))) {
+              let ballObj = (key1 === "ball" || obj1.isBall) ? obj1 : obj2;
+              let kicker  = (key1 === "ball" || obj1.isBall) ? obj2 : obj1;
+
+              let kickerSpeed = Math.sqrt(kicker.vx*kicker.vx + kicker.vy*kicker.vy);
+              if (kickerSpeed > 0) {
+                let unitVx = kicker.vx / kickerSpeed;
+                let unitVy = kicker.vy / kickerSpeed;
+
+                let offAxisSpeed = ballObj.vx * -unitVy + ballObj.vy * unitVx;
+                let offAxisVx = offAxisSpeed * -unitVy;
+                let offAxisVy = offAxisSpeed * unitVx;
+
+                let multiplier = 1.0 - Math.pow(constants.kickOffAxisGlide, dt);
+                ballObj.vx -= offAxisVx * multiplier;
+                ballObj.vy -= offAxisVy * multiplier;
+              }
+            }
           }
         }
       }
@@ -246,8 +267,9 @@ function gameStep() {
 
   for (key in objects) {
     let object = objects[key];
-    object.vx *= Math.pow(object.glide, dt);
-    object.vy *= Math.pow(object.glide, dt);
+    let multiplier = Math.pow(object.glide, dt)
+    object.vx *= multiplier;
+    object.vy *= multiplier;
   }
 
   lastGameTime = now;
