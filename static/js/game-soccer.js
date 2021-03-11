@@ -176,10 +176,10 @@ function gameStep() {
     me.mass    = defaultBallParams.mass * me.radius * me.radius / (constants.playerAsBallRadius * constants.playerAsBallRadius);
     me.glide   = defaultBallParams.glide;
     if (intendedVy == 1) {
-      me.glide *= 0.01;
+      me.glide *= 0.1;
     } else if (intendedVy == -1 && (me.vx*me.vx + me.vy*me.vy > 1)) {
       let heading = atan2(me.vy, me.vx);
-      let acceleration = constants.playerAccelMoving * 0.5 * onFireMultiplier;
+      let acceleration = constants.playerAccelMoving * 0.1 * onFireMultiplier;
       me.vx += cos(heading) * acceleration * dt;
       me.vy += sin(heading) * acceleration * dt;
     }
