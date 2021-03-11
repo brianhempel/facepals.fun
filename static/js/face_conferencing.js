@@ -433,7 +433,7 @@ function setupOpenCV() {
 
         targetFaceCX    = data.location.faceCX;
         targetFaceCY    = data.location.faceCY;
-        targetFaceSize  = data.location.faceSize;
+        targetFaceSize  = Math.round(data.location.faceSize * (gameState?.constants?.faceSizeMultiplier || 1.0));
 
         window.setTimeout(askForFaceDetection, 0.2*1000);
       } else if (data.type === "noFace") {

@@ -26,6 +26,7 @@ let defaultConstants = {
   onFireSoundLevel     : 0.25,
   onFireTransientLevel : 0.6,
   onFireBoost          : 2,
+  faceSizeMultiplier   : 1.2, // Bigger is smaller.
 }
 
 let defaultBallParams = {
