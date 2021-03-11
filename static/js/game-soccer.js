@@ -172,7 +172,7 @@ function gameStep() {
       me.glide = constants.playerGlideIdle;
     }
   } else {
-    me.radius  = Math.max(5, me.radius + intendedVx);
+    me.radius  = Math.max(8, me.radius + intendedVx);
     me.mass    = defaultBallParams.mass * me.radius * me.radius / (constants.playerAsBallRadius * constants.playerAsBallRadius);
     me.glide   = defaultBallParams.glide;
     if (intendedVy == 1) {
