@@ -268,6 +268,12 @@ function handleMessage(peerName, remoteGameState) {
           if (dxMe*dxMe + dyMe*dyMe > dxPeer*dxPeer + dyPeer*dyPeer) {
             objectKeysIOwn.removeAsSet(remoteKey);
             update(localObj[localKey], remoteObj[remoteKey]);
+          } else {
+            // Ownership conflict. Split the difference.
+            gameState.objects[remoteKey].x  = 0.5 * (gameState.objects[remoteKey].x  + remoteObj[remoteKey].x)
+            gameState.objects[remoteKey].y  = 0.5 * (gameState.objects[remoteKey].y  + remoteObj[remoteKey].y)
+            gameState.objects[remoteKey].vx = 0.5 * (gameState.objects[remoteKey].vx + remoteObj[remoteKey].vx)
+            gameState.objects[remoteKey].vy = 0.5 * (gameState.objects[remoteKey].vy + remoteObj[remoteKey].vy)
           }
         } else {
           update(localObj[localKey], remoteObj[remoteKey]);
