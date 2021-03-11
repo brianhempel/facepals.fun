@@ -213,7 +213,8 @@ function getIceCandidateData(peerName, candidateId) {
     peers[peerName].peerConn.addIceCandidate(data).then(() => {
       // iceLog += (new Date()).toISOString() + "      " + peerName + " ICE state " + peers[peerName].peerConn.iceConnectionState + "\n";
     }).catch(err => {
-      console.log("addIceCandidate() failure  " + err.name + " from " + peerName, err, data);
+      console.error("addIceCandidate() failure  " + err.name + " from " + peerName, err, data);
+      console.error(JSON.stringify(data));
       iceLog += (new Date()).toISOString() + " From " + peerName + " ERROR  " + err.name + " on addIceCandidate() " + candidateId + " (" + JSON.stringify(data) + ")\n";
       // iceLog += (new Date()).toISOString() + "      " + peerName + " ICE state " + peers[peerName].peerConn.iceConnectionState + "\n";
     });
