@@ -24,7 +24,7 @@ let defaultConstants = {
   networkFPS           : 30,
   maxForce             : 2000,
   onFireSoundLevel     : 0.25,
-  onFireTransientLevel : 0.55,
+  onFireTransientLevel : 0.6,
   onFireBoost          : 2,
 }
 
