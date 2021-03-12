@@ -215,6 +215,7 @@ function gameStep() {
         if ( key1 === "me" || key2 === "me" || (!(key1 in peers) && !(key2 in peers)) ) {
           let obj1 = objects[key1];
           let obj2 = objects[key2];
+          if (obj1.disabled || obj2.disabled) {continue;}
 
           let dx = obj2.x - obj1.x;
           let dy = obj2.y - obj1.y;
