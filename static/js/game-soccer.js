@@ -46,7 +46,7 @@ let defaultBallParams = {
 }
 
 
-let me                  = {x : Math.random() * gameW, y : -50-defaultGlobals.playerRadius, vx : 0, vy : 0, glide : defaultGlobals.playerGlideIdle, radius : defaultGlobals.playerRadius, mass : defaultGlobals.playerMass, color: "black", isBall : false, grrrring: false};
+let me                  = {x : Math.random() * gameW, y : -50-defaultGlobals.playerRadius, vx : 0, vy : 0, glide : defaultGlobals.playerGlideIdle, radius : defaultGlobals.playerRadius, mass : defaultGlobals.playerMass, color: "black", isBall : false, grrrring: false, deflating: false};
 let ballElem            = document.createElement('img');
 ballElem.src            = "/static/ball.png"
 ballElem.width          = 2 * defaultBallParams.radius;
@@ -245,6 +245,7 @@ function gameStep() {
   }
 
   // Circular spring physics. Bouncy, hehe.
+  me.deflating = false;
   for (key1 in objects) {
     for (key2 in objects) {
       if (key1 < key2) {
@@ -280,6 +281,7 @@ function gameStep() {
             if (me.isBall && (key1 === "me" || key2 === "me")) {
               if (me.radius > maxBallRadius) {
                 me.radius -= Math.round(2*60*dt);
+                me.deflating = true;
               }
             }
 
@@ -375,10 +377,11 @@ function gameGlobalsMatch(gc1, gc2) {
   return true;
 }
 
+var updatesWithoutDeflating = 1000000;
 function broadcastStep() {
 
   // Send self, but with more glide for better intra-update prediction.
-  let update = { objects: { me: {x : me.x, y : me.y, vx : me.vx, vy : me.vy, glide : (me.glide == gameState.globals.playerGlideMoving ? 1.0 : me.glide), radius : me.radius, mass : me.mass, color : me.color, isBall : me.isBall, grrrring: me.grrrring} } };
+  let update = { objects: { me: {x : me.x, y : me.y, vx : me.vx, vy : me.vy, glide : (me.glide == gameState.globals.playerGlideMoving ? 1.0 : me.glide), radius : me.radius, mass : me.mass, color : me.color, isBall : me.isBall, grrrring: me.grrrring, deflating: me.deflating} } };
   let ball = gameState.objects.ball;
 
   if (ball.disabled) {
@@ -401,6 +404,19 @@ function broadcastStep() {
     }
     if (anyBalls) { ball.disabled = true; }
   }
+  var anyDeflating = me.deflating;
+  for (peerName in peers) {
+    if (peerName in gameState.objects && gameState.objects[peerName].deflating) { anyDeflating = true; }
+  }
+  if (anyDeflating) {
+    deflateAudio.play()
+    updatesWithoutDeflating = 0;
+  } else {
+    updatesWithoutDeflating += 1;
+    if (updatesWithoutDeflating / gameState.globals.networkFPS > 0.2) { deflateAudio.pause(); }
+    if (updatesWithoutDeflating / gameState.globals.networkFPS > 0.7) { deflateAudio.currentTime = 0; }
+  }
+
 
   objectKeysIOwn.forEach(key => {
     update.objects[key] = gameState.objects[key];
@@ -410,6 +426,11 @@ function broadcastStep() {
   if (!gameGlobalsMatch(lastGameGlobals, gameState.globals) || Math.random() < 0.0005) {
     update.globals = gameState.globals;
     // console.log(gameState.globals);
+    if (gameState.globals.leftScore != lastGameGlobals.leftScore || gameState.globals.rightScore != lastGameGlobals.rightScore) {
+      dingAudio.currentTime = 0;
+      dingAudio.play();
+    }
+
     lastGameGlobals = clone(gameState.globals);
   }
 
@@ -580,4 +601,15 @@ window.addEventListener('DOMContentLoaded', (event) => {
   grrrr.innerText = '"Grrrr!"';
   grrrr.style.verticalAlign = "super";
   controls.appendChild(grrrr);
+
+  window.dingAudio = document.createElement('audio');
+  window.dingAudio.src = "/static/ding.mp3"
+  window.dingAudio.preload = "auto";
+  controls.appendChild(window.dingAudio);
+
+  window.deflateAudio = document.createElement('audio');
+  window.deflateAudio.src = "/static/deflate_long.mp3"
+  window.deflateAudio.preload = "auto";
+  window.deflateAudio.loop = "true";
+  controls.appendChild(window.deflateAudio);
 });
