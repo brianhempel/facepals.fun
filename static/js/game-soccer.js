@@ -14,24 +14,24 @@ gameDiv.style.backgroundImage = "url(/static/field.jpg)";
 
 
 let defaultGlobals = {
-  leftScore            : 0,
-  rightScore           : 0,
-  playerGlideIdle      : 0.25,
-  playerGlideMoving    : 0.00002,
-  playerAccelMoving    : 2300,
-  playerRadius         : miniFaceSize / 2,
-  playerMass           : 1,
-  playerAsBallAccel    : 100,
-  playerAsBallRadius   : Math.round(miniFaceSize / 3),
-  kickOffAxisGlide     : 0.0005, // Easier dribbling/aiming by reducing ball motion that's off-axis from player motion.
-  wallSpringConstant   : 100,
-  objectSpringConstant : 200,
-  networkFPS           : 30,
-  maxForce             : 2000,
-  onFireSoundLevel     : 0.25,
-  onFireTransientLevel : 0.6,
-  onFireBoost          : 2,
-  faceSizeMultiplier   : 1.2, // Bigger is smaller.
+  leftScore              : 0,
+  rightScore             : 0,
+  playerGlideIdle        : 0.25,
+  playerGlideMoving      : 0.00002,
+  playerAccelMoving      : 2300,
+  playerRadius           : miniFaceSize / 2,
+  playerMass             : 1,
+  playerAsBallAccel      : 100,
+  playerAsBallRadius     : Math.round(miniFaceSize / 3),
+  kickOffAxisGlide       : 0.0005, // Easier dribbling/aiming by reducing ball motion that's off-axis from player motion.
+  wallSpringConstant     : 100,
+  objectSpringConstant   : 200,
+  networkFPS             : 30,
+  maxForce               : 2000,
+  grrrringSoundLevel     : 0.25,
+  grrrringTransientLevel : 0.6,
+  grrrringBoost          : 2,
+  faceSizeMultiplier     : 1.2, // Bigger is smaller.
 }
 
 let defaultBallParams = {
@@ -46,7 +46,7 @@ let defaultBallParams = {
 }
 
 
-let me                  = {x : Math.random() * gameW, y : -50-defaultGlobals.playerRadius, vx : 0, vy : 0, glide : defaultGlobals.playerGlideIdle, radius : defaultGlobals.playerRadius, mass : defaultGlobals.playerMass, color: "black", isBall : false, onFire: false};
+let me                  = {x : Math.random() * gameW, y : -50-defaultGlobals.playerRadius, vx : 0, vy : 0, glide : defaultGlobals.playerGlideIdle, radius : defaultGlobals.playerRadius, mass : defaultGlobals.playerMass, color: "black", isBall : false, grrrring: false};
 let ballElem            = document.createElement('img');
 ballElem.src            = "/static/ball.png"
 ballElem.width          = 2 * defaultBallParams.radius;
@@ -156,19 +156,19 @@ function gameStep() {
   if (keysDown.includes("ArrowRight") || keysDown.includes("d")) { intendedVx += 1 };
   if (keysDown.includes("ArrowUp")    || keysDown.includes("w")) { intendedVy -= 1 };
 
-  var onFireMultiplier;
-  if (quarterSecondMinSoundLevel > globals.onFireSoundLevel || quarterSecondMaxSoundLevel > globals.onFireTransientLevel) {
-    me.onFire = true;
+  var grrrringMultiplier;
+  if (quarterSecondMinSoundLevel > globals.grrrringSoundLevel || quarterSecondMaxSoundLevel > globals.grrrringTransientLevel) {
+    me.grrrring = true;
     // 2-4x boost.
-    onFireMultiplier = globals.onFireBoost + globals.onFireBoost * quarterSecondMaxSoundLevel
+    grrrringMultiplier = globals.grrrringBoost + globals.grrrringBoost * quarterSecondMaxSoundLevel
   } else {
-    me.onFire = false;
-    onFireMultiplier = 1.0;
+    me.grrrring = false;
+    grrrringMultiplier = 1.0;
   }
 
   if (!me.isBall) {
     let intendedHeading = atan2(intendedVy, intendedVx);
-    let acceleration = globals.playerAccelMoving * onFireMultiplier;
+    let acceleration = globals.playerAccelMoving * grrrringMultiplier;
 
     if (intendedVx != 0 || intendedVy != 0) {
       me.vx += cos(intendedHeading) * acceleration * dt;
@@ -178,14 +178,14 @@ function gameStep() {
       me.glide = globals.playerGlideIdle;
     }
   } else {
-    me.radius  = Math.round(Math.max(8, me.radius + intendedVx*onFireMultiplier*60*dt));
+    me.radius  = Math.round(Math.max(8, me.radius + intendedVx*grrrringMultiplier*60*dt));
     me.mass    = defaultBallParams.mass * me.radius * me.radius / (globals.playerAsBallRadius * globals.playerAsBallRadius);
     me.glide   = defaultBallParams.glide;
     if (intendedVy == 1) {
       me.glide *= 0.1;
     } else if (intendedVy == -1 && (me.vx*me.vx + me.vy*me.vy > 1)) {
       let heading = atan2(me.vy, me.vx);
-      let acceleration = globals.playerAccelMoving * 0.1 * onFireMultiplier;
+      let acceleration = globals.playerAccelMoving * 0.1 * grrrringMultiplier;
       me.vx += cos(heading) * acceleration * dt;
       me.vy += sin(heading) * acceleration * dt;
     }
@@ -378,7 +378,7 @@ function gameGlobalsMatch(gc1, gc2) {
 function broadcastStep() {
 
   // Send self, but with more glide for better intra-update prediction.
-  let update = { objects: { me: {x : me.x, y : me.y, vx : me.vx, vy : me.vy, glide : (me.glide == gameState.globals.playerGlideMoving ? 1.0 : me.glide), radius : me.radius, mass : me.mass, color : me.color, isBall : me.isBall, onFire: me.onFire} } };
+  let update = { objects: { me: {x : me.x, y : me.y, vx : me.vx, vy : me.vy, glide : (me.glide == gameState.globals.playerGlideMoving ? 1.0 : me.glide), radius : me.radius, mass : me.mass, color : me.color, isBall : me.isBall, grrrring: me.grrrring} } };
   let ball = gameState.objects.ball;
 
   if (ball.disabled) {
@@ -429,7 +429,7 @@ function stylePlayer(peerName, object, elem) {
 
   var shakeX = 0;
   var shakeY = 0;
-  if (object.onFire) {
+  if (object.grrrring) {
     shakeX = (-1 + 2*Math.random()) * object.radius / 10;
     shakeY = (-1 + 2*Math.random()) * object.radius / 10;
   }
