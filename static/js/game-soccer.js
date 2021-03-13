@@ -13,7 +13,9 @@ gameDiv.style.height          = gameH;
 gameDiv.style.backgroundImage = "url(/static/field.jpg)";
 
 
-let defaultConstants = {
+let defaultGlobals = {
+  leftScore            : 0,
+  rightScore           : 0,
   playerGlideIdle      : 0.25,
   playerGlideMoving    : 0.00002,
   playerAccelMoving    : 2300,
@@ -44,7 +46,7 @@ let defaultBallParams = {
 }
 
 
-let me                  = {x : Math.random() * gameW, y : -50, vx : 0, vy : 0, glide : defaultConstants.playerGlideIdle, radius : defaultConstants.playerRadius, mass : defaultConstants.playerMass, color: "black", isBall : false, onFire: false};
+let me                  = {x : Math.random() * gameW, y : -50-defaultGlobals.playerRadius, vx : 0, vy : 0, glide : defaultGlobals.playerGlideIdle, radius : defaultGlobals.playerRadius, mass : defaultGlobals.playerMass, color: "black", isBall : false, onFire: false};
 let ballElem            = document.createElement('img');
 ballElem.src            = "/static/ball.png"
 ballElem.width          = 2 * defaultBallParams.radius;
@@ -76,11 +78,7 @@ let gameState = {
     pole3: makePole( gameW - 45, gameH/2 - 100),
     pole4: makePole( gameW - 45, gameH/2 + 100),
   },
-  constants : clone(defaultConstants),
-  scoreboard: {
-    left: 0,
-    right: 0,
-  },
+  globals : clone(defaultGlobals),
 };
 let objectKeysIOwn = [];
 let keysDown       = [];
@@ -147,8 +145,8 @@ function gameStep() {
   let now = new Date();
   let dt = Math.min((now - lastGameTime) / 1000, 0.1);
 
-  let constants = gameState.constants;
-  let clampForce = x => clamp(-constants.maxForce, constants.maxForce, x);
+  let globals = gameState.globals;
+  let clampForce = x => clamp(-globals.maxForce, globals.maxForce, x);
 
   var intendedVx = 0;
   var intendedVy = 0;
@@ -159,10 +157,10 @@ function gameStep() {
   if (keysDown.includes("ArrowUp")    || keysDown.includes("w")) { intendedVy -= 1 };
 
   var onFireMultiplier;
-  if (quarterSecondMinSoundLevel > constants.onFireSoundLevel || quarterSecondMaxSoundLevel > constants.onFireTransientLevel) {
+  if (quarterSecondMinSoundLevel > globals.onFireSoundLevel || quarterSecondMaxSoundLevel > globals.onFireTransientLevel) {
     me.onFire = true;
     // 2-4x boost.
-    onFireMultiplier = constants.onFireBoost + constants.onFireBoost * quarterSecondMaxSoundLevel
+    onFireMultiplier = globals.onFireBoost + globals.onFireBoost * quarterSecondMaxSoundLevel
   } else {
     me.onFire = false;
     onFireMultiplier = 1.0;
@@ -170,71 +168,78 @@ function gameStep() {
 
   if (!me.isBall) {
     let intendedHeading = atan2(intendedVy, intendedVx);
-    let acceleration = constants.playerAccelMoving * onFireMultiplier;
+    let acceleration = globals.playerAccelMoving * onFireMultiplier;
 
     if (intendedVx != 0 || intendedVy != 0) {
       me.vx += cos(intendedHeading) * acceleration * dt;
       me.vy += sin(intendedHeading) * acceleration * dt;
-      me.glide = constants.playerGlideMoving;
+      me.glide = globals.playerGlideMoving;
     } else {
-      me.glide = constants.playerGlideIdle;
+      me.glide = globals.playerGlideIdle;
     }
   } else {
     me.radius  = Math.max(8, me.radius + intendedVx);
-    me.mass    = defaultBallParams.mass * me.radius * me.radius / (constants.playerAsBallRadius * constants.playerAsBallRadius);
+    me.mass    = defaultBallParams.mass * me.radius * me.radius / (globals.playerAsBallRadius * globals.playerAsBallRadius);
     me.glide   = defaultBallParams.glide;
     if (intendedVy == 1) {
       me.glide *= 0.1;
     } else if (intendedVy == -1 && (me.vx*me.vx + me.vy*me.vy > 1)) {
       let heading = atan2(me.vy, me.vx);
-      let acceleration = constants.playerAccelMoving * 0.1 * onFireMultiplier;
+      let acceleration = globals.playerAccelMoving * 0.1 * onFireMultiplier;
       me.vx += cos(heading) * acceleration * dt;
       me.vy += sin(heading) * acceleration * dt;
     }
     // console.log(me);
   }
 
-  let objects = gameState.objects;
-  let oldBallX = objects.ball.x, oldBallY = objects.ball.y;
+  let objects     = gameState.objects;
+  let ball        = me.isBall ? me : objects.ball;
+  let oldBallX    = ball.x;
+  let oldBallY    = ball.y;
+  let maxBallRadius = 0.5*(objects.pole2.y - objects.pole1.y) - objects.pole1.radius;
+
   for (key in objects) {
     let object = objects[key];
     object.x += object.vx * dt;
     object.y += object.vy * dt;
 
-    if (object.x - object.radius < 0) {
-      object.vx += clampForce((0 - (object.x - object.radius)) * constants.wallSpringConstant) * dt;
+    if (object.x + object.radius < 0) {
+      object.vx += clampForce((0 - (object.x + object.radius)) * globals.wallSpringConstant) * dt;
     }
-    if (object.x + object.radius > gameW) {
-      object.vx -= clampForce(((object.x + object.radius) - gameW) * constants.wallSpringConstant) * dt;
+    if (object.x - object.radius > gameW) {
+      object.vx -= clampForce(((object.x - object.radius) - gameW) * globals.wallSpringConstant) * dt;
     }
-    if (object.y - object.radius < 0) {
-      object.vy += clampForce((0 - (object.y - object.radius)) * constants.wallSpringConstant) * dt;
+    if (object.y + object.radius < 0) {
+      object.vy += clampForce((0 - (object.y + object.radius)) * globals.wallSpringConstant) * dt;
     }
-    if (object.y + object.radius > gameH) {
-      object.vy -= clampForce(((object.y + object.radius) - gameH) * constants.wallSpringConstant) * dt;
+    if (object.y - object.radius > gameH) {
+      object.vy -= clampForce(((object.y - object.radius) - gameH) * globals.wallSpringConstant) * dt;
     }
   }
 
   // Check if scored (ball crosses either goal line)
-  if (!objects.ball.disabled) {
-    //pole1: makePole( 45,         gameH/2 - 100),
-    //pole2: makePole( 45,         gameH/2 + 100),
-    //pole3: makePole( gameW - 45, gameH/2 - 100),
-    //pole4: makePole( gameW - 45, gameH/2 + 100),
-    if (oldBallX >= objects.pole1.x && objects.ball.x < objects.pole1.x) {
-      if (objects.ball.y < objects.pole2.y && objects.ball.y > objects.pole1.y) {
+  if (!ball.disabled || me.isBall) {
+    let ballY = 0.5 * (oldBallY + ball.y); // Reasonable guess without doing intersection math.
+    if (oldBallX >= objects.pole1.x && ball.x < objects.pole1.x) {
+      if (ballY < objects.pole2.y && ballY > objects.pole1.y) {
         // Score in the left goal
-        gameState.scoreboard.right += 1;
-        gameState.objects.ball = clone(defaultBallParams);
-        console.log(gameState.scoreboard);
+        gameState.globals.rightScore += 1;
+        console.log(gameState.globals);
+        ball.x  = defaultBallParams.x;
+        ball.y  = defaultBallParams.y;
+        ball.vx = defaultBallParams.vx;
+        ball.vy = defaultBallParams.vy;
       }
     }
-    if (oldBallX <= objects.pole3.x && objects.ball.x > objects.pole3.x) {
-      if (objects.ball.y < objects.pole4.y && objects.ball.y > objects.pole3.y) {
+    if (oldBallX <= objects.pole3.x && ball.x > objects.pole3.x) {
+      if (ballY < objects.pole4.y && ballY > objects.pole3.y) {
         // Score in the right goal
-        gameState.scoreboard.left += 1;
-        gameState.objects.ball = clone(defaultBallParams);
-        console.log(gameState.scoreboard);
+        gameState.globals.leftScore += 1;
+        console.log(gameState.globals);
+        ball.x  = defaultBallParams.x;
+        ball.y  = defaultBallParams.y;
+        ball.vx = defaultBallParams.vx;
+        ball.vy = defaultBallParams.vy;
       }
     }
   }
@@ -267,10 +272,16 @@ function gameStep() {
             let unitDx = dx / interDistance;
             let unitDy = dy / interDistance;
 
-            obj1.vx -= clampForce(penetrationDistance * constants.objectSpringConstant * unitDx) * dt / obj1.mass;
-            obj1.vy -= clampForce(penetrationDistance * constants.objectSpringConstant * unitDy) * dt / obj1.mass;
-            obj2.vx += clampForce(penetrationDistance * constants.objectSpringConstant * unitDx) * dt / obj2.mass;
-            obj2.vy += clampForce(penetrationDistance * constants.objectSpringConstant * unitDy) * dt / obj2.mass;
+            obj1.vx -= clampForce(penetrationDistance * globals.objectSpringConstant * unitDx) * dt / obj1.mass;
+            obj1.vy -= clampForce(penetrationDistance * globals.objectSpringConstant * unitDy) * dt / obj1.mass;
+            obj2.vx += clampForce(penetrationDistance * globals.objectSpringConstant * unitDx) * dt / obj2.mass;
+            obj2.vy += clampForce(penetrationDistance * globals.objectSpringConstant * unitDy) * dt / obj2.mass;
+
+            if (me.isBall && (key1 === "me" || key2 === "me")) {
+              if (me.radius > maxBallRadius) {
+                me.radius -= 2;
+              }
+            }
 
             // "Kick" in direction of motion by slowing down object in off-axis motion
             if (((key1 === "ball" || obj1.isBall) && !(key2 === "ball" || obj2.isBall)) || ((key2 === "ball" || obj2.isBall) && !(key1 === "ball" || obj1.isBall))) {
@@ -286,7 +297,7 @@ function gameStep() {
                 let offAxisVx = offAxisSpeed * -unitVy;
                 let offAxisVy = offAxisSpeed * unitVx;
 
-                let multiplier = 1.0 - Math.pow(constants.kickOffAxisGlide, dt);
+                let multiplier = 1.0 - Math.pow(globals.kickOffAxisGlide, dt);
                 ballObj.vx -= offAxisVx * multiplier;
                 ballObj.vy -= offAxisVy * multiplier;
               }
@@ -346,9 +357,9 @@ function removePeerFromGame(peerName) {
 }
 
 
-var lastGameConstants = clone(gameState.constants);
+var lastGameGlobals = clone(gameState.globals);
 
-function gameConstantsMatch(gc1, gc2) {
+function gameGlobalsMatch(gc1, gc2) {
   for (key in gc1) {
     if (gc1[key] != gc2[key]) {
       console.log(key);
@@ -367,7 +378,7 @@ function gameConstantsMatch(gc1, gc2) {
 function broadcastStep() {
 
   // Send self, but with more glide for better intra-update prediction.
-  let update = { objects: { me: {x : me.x, y : me.y, vx : me.vx, vy : me.vy, glide : (me.glide == gameState.constants.playerGlideMoving ? 1.0 : me.glide), radius : me.radius, mass : me.mass, color : me.color, isBall : me.isBall, onFire: me.onFire} } };
+  let update = { objects: { me: {x : me.x, y : me.y, vx : me.vx, vy : me.vy, glide : (me.glide == gameState.globals.playerGlideMoving ? 1.0 : me.glide), radius : me.radius, mass : me.mass, color : me.color, isBall : me.isBall, onFire: me.onFire} } };
   let ball = gameState.objects.ball;
 
   if (ball.disabled) {
@@ -396,18 +407,15 @@ function broadcastStep() {
   });
   // objectKeysIOwn.clear();
 
-  if (!gameConstantsMatch(lastGameConstants, gameState.constants) || Math.random() < 0.0005) {
-    update.constants = gameState.constants;
-    // console.log(gameState.constants);
-    lastGameConstants = clone(gameState.constants);
-  }
-  if (objectKeysIOwn.includes("ball") && !ball.disabled) {
-    update.scoreboard = gameState.scoreboard;
+  if (!gameGlobalsMatch(lastGameGlobals, gameState.globals) || Math.random() < 0.0005) {
+    update.globals = gameState.globals;
+    // console.log(gameState.globals);
+    lastGameGlobals = clone(gameState.globals);
   }
 
   broadcast(update);
 
-  window.setTimeout(broadcastStep, 1000 / gameState.constants.networkFPS);
+  window.setTimeout(broadcastStep, 1000 / gameState.globals.networkFPS);
 }
 window.setTimeout(broadcastStep, 100);
 
@@ -490,8 +498,8 @@ function tick() {
   }
 
   // Update score elements
-  rightScoreElem.innerText = formatScore(gameState.scoreboard.right);
-  leftScoreElem.innerText = formatScore(gameState.scoreboard.left);
+  leftScoreElem.innerText  = formatScore(gameState.globals.leftScore);
+  rightScoreElem.innerText = formatScore(gameState.globals.rightScore);
 
   requestAnimationFrame(tick);
 }
@@ -555,13 +563,13 @@ window.addEventListener('DOMContentLoaded', (event) => {
   ballButton.addEventListener('click', event => {
     if ( me.isBall ) {
       me.isBall = false;
-      me.radius = gameState.constants.playerRadius;
-      me.mass   = gameState.constants.playerMass;
+      me.radius = gameState.globals.playerRadius;
+      me.mass   = gameState.globals.playerMass;
       ballButton.innerText = "I'm the ball!"
     } else {
       me.isBall = true;
       me.glide  = defaultBallParams.glide;
-      me.radius = gameState.constants.playerAsBallRadius;
+      me.radius = gameState.globals.playerAsBallRadius;
       ballButton.innerText = "I'm not the ball!"
     }
   });
