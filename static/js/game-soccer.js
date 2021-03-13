@@ -178,7 +178,7 @@ function gameStep() {
       me.glide = globals.playerGlideIdle;
     }
   } else {
-    me.radius  = Math.max(8, me.radius + intendedVx);
+    me.radius  = Math.round(Math.max(8, me.radius + intendedVx*onFireMultiplier*60*dt));
     me.mass    = defaultBallParams.mass * me.radius * me.radius / (globals.playerAsBallRadius * globals.playerAsBallRadius);
     me.glide   = defaultBallParams.glide;
     if (intendedVy == 1) {
@@ -279,7 +279,7 @@ function gameStep() {
 
             if (me.isBall && (key1 === "me" || key2 === "me")) {
               if (me.radius > maxBallRadius) {
-                me.radius -= 2;
+                me.radius -= Math.round(2*60*dt);
               }
             }
 
