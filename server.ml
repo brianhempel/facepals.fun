@@ -118,6 +118,15 @@ and rm_all = function
   let* _ = if is_dir then rm_r path else Lwt_unix.unlink path in
   rm_all paths
 
+let remove_peer req =
+  let room_name      = Router.param req "room_name" in
+  let peer_name      = Router.param req "peer_name" in
+  let peer_dir_path  = Core.Filename.of_parts ["rooms"; room_name; "peers"; peer_name] in
+  let open Lwt.Syntax in
+  let* path_exists = Lwt_unix.file_exists peer_dir_path in
+  Lwt.async (fun () -> rm_r peer_dir_path);
+  Lwt.return (Response.make ())
+
 let peer_heartbeat req =
   let room_name      = Router.param req "room_name" in
   let peer_name      = Router.param req "peer_name" in
@@ -246,6 +255,7 @@ let _ =
   |> App.get "/rooms/:room_name" (fun _ -> respond_with_known_html (Core.Filename.of_parts ["static"; "game.html"]))
   |> App.post "/rooms/:room_name/peers" new_peer_name
   |> App.get "/rooms/:room_name/peers" list_peers
+  |> App.post "/rooms/:room_name/peers/:peer_name/remove" remove_peer (* Would use DELETE method, but JS navigator.sendBeacon is POST-only *)
   |> App.post "/rooms/:room_name/peers/:peer_name/heartbeat" peer_heartbeat
   |> App.post "/rooms/:room_name/peers/:peer_name/offers/:offering_peer_name" new_peer_offer
   |> App.get "/rooms/:room_name/peers/:peer_name/offers/:offering_peer_name" get_peer_offer

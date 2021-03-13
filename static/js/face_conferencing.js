@@ -95,6 +95,7 @@ function acquirePeerName() {
     console.log("My peer name is " + myPeerName);
     heartbeat();
     pollForPeers();
+    window.addEventListener("beforeunload", _ => navigator.sendBeacon('/rooms/' + roomName + '/peers/' + myPeerName + '/remove'));
   }).catch(err => {
     console.warn("Couldn't acquire peer name", err);
     window.setTimeout(acquirePeerName, 3000);
