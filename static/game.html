@@ -1,6 +1,7 @@
 <html>
   <head>
     <title>Face Pals</title>
+    <meta charset="UTF-8">
     <link href="/static/styles.css" rel="stylesheet"/>
     <link rel="preload" as="script" href="/static/js/opencv.js" onload="window.opencvDownloaded = true">
     <link rel="preload" as="fetch" href="/static/haarcascade_frontalface_default.xml">
@@ -10,8 +11,12 @@
     <h1>Face Pals</h1>
     <!-- <canvas id="gameCanvas"></canvas> -->
     <div id="gameDiv" style="position: relative;">
-      <div id="leftScore"  style="position: absolute; font-size: 120%; top: -2.2em; left:  20%; border: solid white 5px; padding: 0.2em 0.3em; background-color: rgba(0,0,0,0.3)"></div>
+      <div id="leftScore" style="position: absolute; font-size: 120%; top: -2.2em; left:  20%; border: solid white 5px; padding: 0.2em 0.3em; background-color: rgba(0,0,0,0.3)"></div>
+      <div style="position: absolute; top: -2.65em; left: 17%; cursor: pointer; opacity: 0.88;" onclick="gameState.globals.leftScore += 1">🔼</div>
+      <div style="position: absolute; top: -1.6em;  left: 17%; cursor: pointer; opacity: 0.88;" onclick="gameState.globals.leftScore -= 1">🔽</div>
       <div id="rightScore" style="position: absolute; font-size: 120%; top: -2.2em; right: 20%; border: solid white 5px; padding: 0.2em 0.3em; background-color: rgba(0,0,0,0.3)"></div>
+      <div style="position: absolute; top: -2.65em; right: 17%; cursor: pointer; opacity: 0.88;" onclick="gameState.globals.rightScore += 1">🔼</div>
+      <div style="position: absolute; top: -1.6em;  right: 17%; cursor: pointer; opacity: 0.88;" onclick="gameState.globals.rightScore -= 1">🔽</div>
       <canvas id="myFaceCanvas" style="position: absolute"></canvas>
       <video id="myVid" muted style="display: none"></video>
       <div id="loading">Loading...</div>
