@@ -6,8 +6,8 @@ function clone(obj) {
 let gameW                     = 16*80
 let gameH                     = 9*80
 let gameDiv                   = document.getElementById('gameDiv');
-let rightScoreElem            = document.getElementById('rightscore');
-let leftScoreElem             = document.getElementById('leftscore');
+let rightScoreElem            = document.getElementById('rightScore');
+let leftScoreElem             = document.getElementById('leftScore');
 gameDiv.style.width           = gameW;
 gameDiv.style.height          = gameH;
 gameDiv.style.backgroundImage = "url(/static/field.jpg)";
