@@ -169,7 +169,7 @@ function makeOnTrackHandler(peerName) {
       let vidElem                = document.createElement("video");
       vidElem.width              = miniFaceSize;
       vidElem.height             = miniFaceSize;
-      document.getElementById('gameDiv').appendChild(vidElem);
+      myFaceCanvas.before(vidElem);
       vidElem.style.borderRadius = "" + (miniFaceSize / 2) + "px";
       vidElem.style.position     = "absolute";
       peers[peerName].vidElem    = vidElem;
