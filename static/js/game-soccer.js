@@ -46,7 +46,7 @@ let defaultBallParams = {
 }
 
 
-let me                  = {x : Math.random() * gameW, y : -50-defaultGlobals.playerRadius, vx : 0, vy : 0, glide : defaultGlobals.playerGlideIdle, radius : defaultGlobals.playerRadius, mass : defaultGlobals.playerMass, color: "black", isBall : false, grrrring: false, deflating: false};
+let me                  = {x : Math.random() * gameW, y : -50-defaultGlobals.playerRadius, vx : 0, vy : 0, glide : defaultGlobals.playerGlideIdle, radius : defaultGlobals.playerRadius, mass : defaultGlobals.playerMass, color: "black", isBall : false, grrrring: false, deflating: false, new: true};
 let ballElem            = document.createElement('img');
 ballElem.src            = "/static/ball.png"
 ballElem.width          = 2 * defaultBallParams.radius;
@@ -323,6 +323,7 @@ function gameStep() {
 function handleMessage(peerName, remoteGameState) {
   function update(localObj, remoteObj) {
     for (remoteKey in remoteObj) {
+      if (remoteKey === "globals") { me.new = false };
       let localKey = remoteKey === "me" ? peerName : remoteKey;
       if (!(localKey in localObj)) {
         localObj[localKey] = remoteObj[remoteKey];
@@ -381,7 +382,7 @@ var updatesWithoutDeflating = 1000000;
 function broadcastStep() {
 
   // Send self, but with more glide for better intra-update prediction.
-  let update = { objects: { me: {x : me.x, y : me.y, vx : me.vx, vy : me.vy, glide : (me.glide == gameState.globals.playerGlideMoving ? 1.0 : me.glide), radius : me.radius, mass : me.mass, color : me.color, isBall : me.isBall, grrrring: me.grrrring, deflating: me.deflating} } };
+  let update = { objects: { me: {x : me.x, y : me.y, vx : me.vx, vy : me.vy, glide : (me.glide == gameState.globals.playerGlideMoving ? 1.0 : me.glide), radius : me.radius, mass : me.mass, color : me.color, isBall : me.isBall, grrrring: me.grrrring, deflating: me.deflating, new: me.new} } };
   let ball = gameState.objects.ball;
 
   if (ball.disabled) {
@@ -423,15 +424,24 @@ function broadcastStep() {
   });
   // objectKeysIOwn.clear();
 
-  if (!gameGlobalsMatch(lastGameGlobals, gameState.globals) || Math.random() < 0.0005) {
-    update.globals = gameState.globals;
-    // console.log(gameState.globals);
-    if (gameState.globals.leftScore != lastGameGlobals.leftScore || gameState.globals.rightScore != lastGameGlobals.rightScore) {
-      dingAudio.currentTime = 0;
-      dingAudio.play();
+  if (!me.new) {
+    var anyNew = false;
+    for (peerName in peers) {
+      if (peerName in gameState.objects && gameState.objects[peerName].new) { anyNew = true; }
     }
-
-    lastGameGlobals = clone(gameState.globals);
+    if (anyNew || !gameGlobalsMatch(lastGameGlobals, gameState.globals) || Math.random() < 0.0005) {
+      update.globals = gameState.globals;
+      if (gameState.globals.leftScore != lastGameGlobals.leftScore || gameState.globals.rightScore != lastGameGlobals.rightScore) {
+        dingAudio.currentTime = 0;
+        dingAudio.play();
+      }
+      lastGameGlobals = clone(gameState.globals);
+    }
+  } else {
+    // Are we the first player?
+    if (myPeerName in peers && Object.keys(peers).length == 1) {
+      me.new = false;
+    }
   }
 
   broadcast(update);
