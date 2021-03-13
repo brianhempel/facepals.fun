@@ -6,6 +6,8 @@ function clone(obj) {
 let gameW                     = 16*80
 let gameH                     = 9*80
 let gameDiv                   = document.getElementById('gameDiv');
+let rightScoreElem            = document.getElementById('rightscore');
+let leftScoreElem             = document.getElementById('leftscore');
 gameDiv.style.width           = gameW;
 gameDiv.style.height          = gameH;
 gameDiv.style.backgroundImage = "url(/static/field.jpg)";
@@ -74,7 +76,11 @@ let gameState = {
     pole3: makePole( gameW - 45, gameH/2 - 100),
     pole4: makePole( gameW - 45, gameH/2 + 100),
   },
-  constants : clone(defaultConstants)
+  constants : clone(defaultConstants),
+  scoreboard: {
+    left: 0,
+    right: 0,
+  },
 };
 let objectKeysIOwn = [];
 let keysDown       = [];
@@ -189,6 +195,7 @@ function gameStep() {
   }
 
   let objects = gameState.objects;
+  let oldBallX = objects.ball.x, oldBallY = objects.ball.y;
   for (key in objects) {
     let object = objects[key];
     object.x += object.vx * dt;
@@ -205,6 +212,30 @@ function gameStep() {
     }
     if (object.y + object.radius > gameH) {
       object.vy -= clampForce(((object.y + object.radius) - gameH) * constants.wallSpringConstant) * dt;
+    }
+  }
+
+  // Check if scored (ball crosses either goal line)
+  if (!objects.ball.disabled) {
+    //pole1: makePole( 45,         gameH/2 - 100),
+    //pole2: makePole( 45,         gameH/2 + 100),
+    //pole3: makePole( gameW - 45, gameH/2 - 100),
+    //pole4: makePole( gameW - 45, gameH/2 + 100),
+    if (oldBallX >= objects.pole1.x && objects.ball.x < objects.pole1.x) {
+      if (objects.ball.y < objects.pole2.y && objects.ball.y > objects.pole1.y) {
+        // Score in the left goal
+        gameState.scoreboard.right += 1;
+        gameState.objects.ball = clone(defaultBallParams);
+        console.log(gameState.scoreboard);
+      }
+    }
+    if (oldBallX <= objects.pole3.x && objects.ball.x > objects.pole3.x) {
+      if (objects.ball.y < objects.pole4.y && objects.ball.y > objects.pole3.y) {
+        // Score in the right goal
+        gameState.scoreboard.left += 1;
+        gameState.objects.ball = clone(defaultBallParams);
+        console.log(gameState.scoreboard);
+      }
     }
   }
 
@@ -370,6 +401,9 @@ function broadcastStep() {
     // console.log(gameState.constants);
     lastGameConstants = clone(gameState.constants);
   }
+  if (objectKeysIOwn.includes("ball") && !ball.disabled) {
+    update.scoreboard = gameState.scoreboard;
+  }
 
   broadcast(update);
 
@@ -455,7 +489,19 @@ function tick() {
     ballElem.style.top  = Math.floor(ball.y - ball.radius);
   }
 
+  // Update score elements
+  rightScoreElem.innerText = formatScore(gameState.scoreboard.right);
+  leftScoreElem.innerText = formatScore(gameState.scoreboard.left);
+
   requestAnimationFrame(tick);
+}
+
+function formatScore(score) {
+  if (score < 10) {
+    return "0" + score.toString();
+  } else {
+    return score.toString();
+  }
 }
 
 requestAnimationFrame(tick);
