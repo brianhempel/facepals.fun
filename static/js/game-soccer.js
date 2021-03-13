@@ -356,6 +356,10 @@ function handleMessage(peerName, remoteGameState) {
 }
 
 function removePeerFromGame(peerName) {
+  if (ballOverlayElems[peerName]) {
+    ballOverlayElems[peerName].remove();
+    delete ballOverlayElems[peerName];
+  }
   delete gameState.objects[peerName];
 }
 
