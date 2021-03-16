@@ -37,7 +37,7 @@ const peerConnConfig = {
       urls: 'stun:facepals.fun:5349'
     },
     {
-      urls: 'turns:facepals.fun:5349',
+      urls: 'turn:facepals.fun:5349',
       username: 'facepals',
       credential: 'facepalspwd'
     }
