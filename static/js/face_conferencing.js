@@ -210,6 +210,7 @@ function getIceCandidateData(peerName, candidateId) {
   fetch('/rooms/' + roomName + '/peers/' + myPeerName + '/ice_candidates/' + peerName + '/' + candidateId)
   .then(resp => resp.ok ? resp.json() :  Promise.reject(resp))
   .then(data => {
+    console.log(data);
     iceLog += (new Date()).toISOString() + " From " + peerName + " got ICE candidate " + candidateId + " (" + JSON.stringify(data) + ")\n";
     peers[peerName].peerConn.addIceCandidate(data).then(() => {
       // iceLog += (new Date()).toISOString() + "      " + peerName + " ICE state " + peers[peerName].peerConn.iceConnectionState + "\n";
@@ -275,6 +276,12 @@ function pollForOfferFrom(peerName) {
       peerConn.oniceconnectionstatechange = _ => {
         iceLog += (new Date()).toISOString() + "      " + peerName + " ICE state " + peerConn.iceConnectionState + "\n";
       };
+      peerConn.addEventListener("icecandidateerror", (event) => {
+        if (event.errorCode === 701) {
+          console.error("icecandidateerror " + peerName + " " + event.url + " " + event.errorText);
+          iceLog += (new Date()).toISOString() + "      " + peerName + " ICE icecandidateerror 701 " + " " + event.url + " " + event.errorText + "\n";
+        }
+      });
       peerConn.addTrack(myFaceStream.getVideoTracks()[0], myVidStream);
       peerConn.addTrack(myVidStream.getAudioTracks()[0], myVidStream);
       peers[peerName].peerConn = peerConn;
@@ -344,6 +351,12 @@ function pollForPeers() {
             peerConn.oniceconnectionstatechange = _ => {
               iceLog += (new Date()).toISOString() + "      " + peerName + " ICE state " + peerConn.iceConnectionState + "\n";
             };
+            peerConn.addEventListener("icecandidateerror", (event) => {
+              if (event.errorCode === 701) {
+                console.error("icecandidateerror " + peerName + " " + event.url + " " + event.errorText);
+                iceLog += (new Date()).toISOString() + "      " + peerName + " ICE icecandidateerror 701 " + " " + event.url + " " + event.errorText + "\n";
+              }
+            });
             peerConn.addTrack(myFaceStream.getVideoTracks()[0], myVidStream);
             peerConn.addTrack(myVidStream.getAudioTracks()[0], myVidStream);
             peers[peerName].peerConn = peerConn;
