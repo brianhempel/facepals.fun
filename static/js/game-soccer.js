@@ -45,14 +45,14 @@ let defaultBallParams = {
   disabled : false,
 }
 
-
+// Creates object to store "me"'s constants
 let me                  = {x : Math.random() * gameW, y : -50-defaultGlobals.playerRadius, vx : 0, vy : 0, glide : defaultGlobals.playerGlideIdle, radius : defaultGlobals.playerRadius, mass : defaultGlobals.playerMass, color: "black", isBall : false, grrrring: false, deflating: false, new: true};
-let ballElem            = document.createElement('img');
+let ballElem            = document.createElement('img'); // creates image to insert into html
 ballElem.src            = "/static/ball.png"
 ballElem.width          = 2 * defaultBallParams.radius;
 ballElem.height         = 2 * defaultBallParams.radius;
 ballElem.style.position = "absolute";
-gameDiv.appendChild(ballElem);
+gameDiv.appendChild(ballElem); // inserts image into html at end of gameDiv
 let ballOverlayElems    = {};
 
 function makePole(x, y) {
@@ -62,17 +62,17 @@ function makePole(x, y) {
   poleElem.style.height          = 2 * pole.radius;
   poleElem.style.position        = "absolute";
   poleElem.style.backgroundColor = "white";
-  poleElem.style.borderRadius    = "" + pole.radius + "px";
+  poleElem.style.borderRadius    = "" + pole.radius + "px"; // makes circle!
   poleElem.style.left            = x - pole.radius / 2;
   poleElem.style.top             = y - pole.radius / 2;
   gameDiv.appendChild(poleElem);
   return pole;
 }
 
-let gameState = {
+let gameState = { // has two keys, "objects" and "globals", which are synchronized between players
   objects: {
     me: me,
-    ball: clone(defaultBallParams),
+    ball: clone(defaultBallParams), // makes new object - he wrote clone himself - to not change defaults
     pole1: makePole( 45,         gameH/2 - 100),
     pole2: makePole( 45,         gameH/2 + 100),
     pole3: makePole( gameW - 45, gameH/2 - 100),
@@ -80,13 +80,13 @@ let gameState = {
   },
   globals : clone(defaultGlobals),
 };
-let objectKeysIOwn = [];
-let keysDown       = [];
-let lastGameTime   = new Date();
+let objectKeysIOwn = []; // last person to touch the ball is responsible for communicating where it is to other players
+let keysDown       = []; // keyboard keys being pressed
+let lastGameTime   = new Date(); // how much time since last physics update
 
 let usedKeys = ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "a", "s", "d", "w"];
 
-Array.prototype.addAsSet = function(elem) {
+Array.prototype.addAsSet = function(elem) { // pretend array is a set and add something to it
   if (!this.includes(elem)) {
     this.push(elem);
   }
@@ -115,9 +115,9 @@ function clamp(lo, hi, x) {
   return Math.max(lo, Math.min(hi, x));
 }
 
-let cos   = deg    => Math.cos(deg / 180 * Math.PI)
+let cos   = deg    => Math.cos(deg / 180 * Math.PI) // degrees not radians!
 let sin   = deg    => Math.sin(deg / 180 * Math.PI)
-let atan2 = (y, x) => Math.atan2(y, x) / Math.PI * 180
+let atan2 = (y, x) => Math.atan2(y, x) / Math.PI * 180 // turns x,y coordinate into degrees from 0,0
 
 
 // function drawFrame() {
@@ -547,9 +547,9 @@ function formatScore(score) {
   }
 }
 
-requestAnimationFrame(tick);
+requestAnimationFrame(tick); //asks browser to run the tick function the next time you do an animation frame (1/60 second)
 
-window.addEventListener('DOMContentLoaded', (event) => {
+window.addEventListener('DOMContentLoaded', (event) => { // when most of html is loaded, run this!
   let colors = ["black", "#ddd", "blue", "#a0a", "maroon", "#e70", "#cc0", "#0a0", "#0cc"];
 
   let controls = document.createElement('p');
@@ -567,6 +567,13 @@ window.addEventListener('DOMContentLoaded', (event) => {
       }
     });
   };
+
+  // Text "choose a color" is placed in colorPicker span
+  let colornote = document.createElement("p");
+  colornote.style.padding="10px";
+  let colortext = document.createTextNode("Choose a color!");
+  colornote.appendChild(colortext);
+  colorPicker.appendChild(colornote);
 
   colors.forEach(color => {
     let swatch = document.createElement("span");
