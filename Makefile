@@ -9,11 +9,17 @@ dev_setup:
 	sh <(curl -sL https://raw.githubusercontent.com/ocaml/opam/master/shell/install.sh)
 	opam switch create 4.11.1
 	eval $(opam env)
+	sudo apt-get install libev-dev
 	# opam install dune
 	opam install opium core
 
 run: server
 	ulimit -S -n $(ulimit -Hn); ./server
+
+renew_cert:
+	sudo certbot renew
+	sudo sh -c "cat /etc/letsencrypt/live/facepals.fun/fullchain.pem /etc/letsencrypt/live/facepals.fun/privkey.pem > /etc/ssl/private/facepals.fun.pem"
+	sudo service haproxy restart
 
 setup_server:
 	# https://www.digitalocean.com/community/tutorials/initial-server-setup-with-ubuntu-20-04
@@ -33,7 +39,6 @@ setup_server:
   #  /etc/letsencrypt/live/facepals.fun/fullchain.pem
   #  Your key file has been saved at:
   #  /etc/letsencrypt/live/facepals.fun/privkey.pem
-	sudo certbot renew --dry-run
 
 	git clone https://github.com/brianhempel/facepals.fun.git
 
