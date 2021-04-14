@@ -47,6 +47,8 @@ let defaultBallParams = {
 
 // Creates object to store "me"'s constants
 let me                  = {x : Math.random() * gameW, y : -50-defaultGlobals.playerRadius, vx : 0, vy : 0, glide : defaultGlobals.playerGlideIdle, radius : defaultGlobals.playerRadius, mass : defaultGlobals.playerMass, color: "black", isBall : false, grrrring: false, deflating: false, new: true};
+let grrrrRemaining      = 2.0;
+let grrrrStopTime       = new Date();
 let ballElem            = document.createElement('img'); // creates image to insert into html
 ballElem.src            = "/static/ball.png"
 ballElem.width          = 2 * defaultBallParams.radius;
@@ -157,12 +159,18 @@ function gameStep() {
   if (keysDown.includes("ArrowUp")    || keysDown.includes("w")) { intendedVy -= 1 };
 
   var grrrringMultiplier;
-  if (quarterSecondMinSoundLevel > globals.grrrringSoundLevel || quarterSecondMaxSoundLevel > globals.grrrringTransientLevel) {
+  if (grrrrRemaining > 0 && (quarterSecondMinSoundLevel > globals.grrrringSoundLevel || quarterSecondMaxSoundLevel > globals.grrrringTransientLevel)) {
     me.grrrring = true;
+    grrrrRemaining -= dt;
+    grrrrStopTime = now;
     // 2-4x boost.
     grrrringMultiplier = globals.grrrringBoost + globals.grrrringBoost * quarterSecondMaxSoundLevel
   } else {
     me.grrrring = false;
+    if (now - grrrrStopTime >= 4000.0){
+      grrrrRemaining += dt;
+      grrrrRemaining = Math.min(grrrrRemaining,2.0);
+    }
     grrrringMultiplier = 1.0;
   }
 
@@ -535,6 +543,10 @@ function tick() {
   // Update score elements
   leftScoreElem.innerText  = formatScore(gameState.globals.leftScore);
   rightScoreElem.innerText = formatScore(gameState.globals.rightScore);
+  grrrr.style.overflow     = "hidden";
+  grrrr.style.display      = "inline-block";
+  //grrrr.style.width        = grrrrRemaining * 50 + "px";
+  grrrr.style.transform    = "scale(" + Math.sqrt(Math.max(grrrrRemaining/2,0)) + ")"
 
   requestAnimationFrame(tick);
 }
@@ -618,10 +630,10 @@ window.addEventListener('DOMContentLoaded', (event) => { // when most of html is
 
   controls.appendChild(ballButton);
 
-  let grrrr = document.createElement('span');
-  grrrr.innerText = '"Grrrr!"';
-  grrrr.style.verticalAlign = "super";
-  controls.appendChild(grrrr);
+  window.grrrr = document.createElement('span');
+  window.grrrr.innerText = '"Grrrr!"';
+  window.grrrr.style.verticalAlign = "super";
+  controls.appendChild(window.grrrr);
 
   window.dingAudio = document.createElement('audio');
   window.dingAudio.src = "/static/ding.mp3"
