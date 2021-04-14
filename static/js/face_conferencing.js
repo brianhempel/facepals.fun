@@ -34,9 +34,6 @@ var iceLog          = "";
 const peerConnConfig = {
   iceServers: [
     {
-      urls: 'stun:facepals.fun:5349'
-    },
-    {
       urls: 'turn:facepals.fun:5349',
       username: 'facepals',
       credential: 'facepalspwd'
