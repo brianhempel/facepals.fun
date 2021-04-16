@@ -282,7 +282,7 @@ function gameStep() {
               objectKeysIOwn.addAsSet(key1);
             }
 
-            let interDistance       = Math.sqrt(dx*dx + dy*dy);
+            let interDistance       = Math.max(1, Math.sqrt(dx*dx + dy*dy));
             let penetrationDistance = radiusSum - interDistance;
 
             let unitDx = dx / interDistance;
