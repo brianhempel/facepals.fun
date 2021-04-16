@@ -27,6 +27,8 @@ let defaultGlobals = {
   wallSpringConstant     : 100,
   objectSpringConstant   : 200,
   networkFPS             : 30,
+  smoothingSeconds       : 0.2,
+  maxSmoothingDistance   : 200,
   maxForce               : 2000,
   grrrringSoundLevel     : 0.25,
   grrrringTransientLevel : 0.6,
@@ -226,7 +228,7 @@ function gameStep() {
   }
 
   // Check if scored (ball crosses either goal line)
-  if ((!ball.disabled && objectKeysIOwn.includes("ball"))|| me.isBall) {
+  if ((!ball.disabled && objectKeysIOwn.includes("ball")) || me.isBall) {
     let ballY = 0.5 * (oldBallY + ball.y); // Reasonable guess without doing intersection math.
     if (oldBallX >= objects.pole1.x && ball.x < objects.pole1.x) {
       if (ballY < objects.pole2.y && ballY > objects.pole1.y) {
@@ -336,7 +338,7 @@ function handleMessage(peerName, remoteGameState) {
       if (!(localKey in localObj)) {
         localObj[localKey] = remoteObj[remoteKey];
       } else if (typeof remoteObj[remoteKey] === "object") {
-        if (objectKeysIOwn.includes(remoteKey) && gameState.objects[peerName] && gameState.objects[remoteKey]) {
+        if (objectKeysIOwn.includes(localKey) && gameState.objects[peerName] && gameState.objects[localKey]) {
           // Only relinquish ownership if I think the object is closer to the peer in question.
           let dxMe   = gameState.objects.me.x        - gameState.objects[localKey].x;
           let dyMe   = gameState.objects.me.y        - gameState.objects[localKey].y;
@@ -352,13 +354,23 @@ function handleMessage(peerName, remoteGameState) {
             gameState.objects[localKey].vx = 0.5 * (gameState.objects[localKey].vx + remoteObj[remoteKey].vx)
             gameState.objects[localKey].vy = 0.5 * (gameState.objects[localKey].vy + remoteObj[remoteKey].vy)
           }
-        } else if ("vx" in remoteObj[remoteKey] && "vy" in remoteObj[remoteKey]) {
-            let futureX = remoteObj[remoteKey].x + remoteObj[remoteKey].vx*.5;
-            let futureY = remoteObj[remoteKey].y + remoteObj[remoteKey].vy*.5;
-            let dX = futureX - gameState.objects[localKey].x;
-            let dY = futureY - gameState.objects[localKey].y;
-            gameState.objects[localKey].vx = dX*2;
-            gameState.objects[localKey].vy = dY*2;
+        } else if ("vx" in remoteObj[remoteKey] && "vy" in remoteObj[remoteKey] && gameState.globals.smoothingSeconds > 0) {
+            // Don't smooth non-moving objects, or objects far from their true position
+            let remoteGameObj = remoteObj[remoteKey];
+            let localGameObj  = localObj[localKey];
+            let dx            = localGameObj.x - remoteGameObj.x;
+            let dy            = localGameObj.y - remoteGameObj.y;
+            if ( (remoteGameObj.vx === 0 && remoteGameObj.vy === 0) || (dx*dx + dy*dy) > gameState.globals.maxSmoothingDistance*gameState.globals.maxSmoothingDistance ) {
+              update(localObj[localKey], remoteObj[remoteKey]);
+            } else {
+              // Smooth updates to other objects: try to reach the same point in smoothingSeconds
+              let futureX = remoteGameObj.x + remoteGameObj.vx*gameState.globals.smoothingSeconds;
+              let futureY = remoteGameObj.y + remoteGameObj.vy*gameState.globals.smoothingSeconds;
+              let dfX = futureX - gameState.objects[localKey].x;
+              let dfY = futureY - gameState.objects[localKey].y;
+              gameState.objects[localKey].vx = dfX/gameState.globals.smoothingSeconds;
+              gameState.objects[localKey].vy = dfY/gameState.globals.smoothingSeconds;
+            }
         } else {
           update(localObj[localKey], remoteObj[remoteKey]);
         }
