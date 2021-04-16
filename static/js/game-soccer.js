@@ -84,6 +84,7 @@ let gameState = { // has two keys, "objects" and "globals", which are synchroniz
   },
   globals : clone(defaultGlobals),
 };
+var globalsBroadcastProb = 1/30/gameState.globals.networkFPS;
 let objectKeysIOwn = []; // last person to touch the ball is responsible for communicating where it is to other players
 let keysDown       = []; // keyboard keys being pressed
 let lastGameTime   = new Date(); // how much time since last physics update
@@ -234,7 +235,9 @@ function gameStep() {
       if (ballY < objects.pole2.y && ballY > objects.pole1.y) {
         // Score in the left goal
         gameState.globals.rightScore += 1;
-        console.log(gameState.globals);
+        globalsBroadcastProb = 1.0;
+        playDing();
+        // console.log(gameState.globals);
         ball.x  = defaultBallParams.x;
         ball.y  = defaultBallParams.y;
         ball.vx = defaultBallParams.vx;
@@ -245,7 +248,9 @@ function gameStep() {
       if (ballY < objects.pole4.y && ballY > objects.pole3.y) {
         // Score in the right goal
         gameState.globals.leftScore += 1;
-        console.log(gameState.globals);
+        globalsBroadcastProb = 1.0;
+        playDing();
+        // console.log(gameState.globals);
         ball.x  = defaultBallParams.x;
         ball.y  = defaultBallParams.y;
         ball.vx = defaultBallParams.vx;
@@ -379,6 +384,13 @@ function handleMessage(peerName, remoteGameState) {
       }
     }
   }
+  if (remoteGameState?.globals) {
+    console.log("received globals", clone(remoteGameState.globals));
+  }
+  if ((remoteGameState?.globals?.leftScore  !== undefined && gameState.globals.leftScore  != remoteGameState?.globals?.leftScore) ||
+      (remoteGameState?.globals?.rightScore !== undefined && gameState.globals.rightScore != remoteGameState?.globals?.rightScore)) {
+    playDing();
+  }
   update(gameState, remoteGameState);
 }
 
@@ -391,23 +403,23 @@ function removePeerFromGame(peerName) {
 }
 
 
-var lastGameGlobals = clone(gameState.globals);
+// var lastGameGlobals = clone(gameState.globals);
 
-function gameGlobalsMatch(gc1, gc2) {
-  for (key in gc1) {
-    if (gc1[key] != gc2[key]) {
-      console.log(key);
-      return false;
-    }
-  }
-  for (key in gc2) {
-    if (!(key in gc1)) {
-      console.log(key);
-      return false;
-    }
-  }
-  return true;
-}
+// function gameGlobalsMatch(gc1, gc2) {
+//   for (key in gc1) {
+//     if (gc1[key] != gc2[key]) {
+//       console.log(key);
+//       return false;
+//     }
+//   }
+//   for (key in gc2) {
+//     if (!(key in gc1)) {
+//       console.log(key);
+//       return false;
+//     }
+//   }
+//   return true;
+// }
 
 var updatesWithoutDeflating = 1000000;
 function broadcastStep() {
@@ -460,22 +472,25 @@ function broadcastStep() {
     for (peerName in peers) {
       if (peerName in gameState.objects && gameState.objects[peerName].new) { anyNew = true; }
     }
-    if (anyNew || !gameGlobalsMatch(lastGameGlobals, gameState.globals) || Math.random() < 0.0005) {
+    if (anyNew || Math.random() <= globalsBroadcastProb) {
+    // if (anyNew || !gameGlobalsMatch(lastGameGlobals, gameState.globals) || Math.random() <= globalsBroadcastProb) {
       update.globals = gameState.globals;
-      if (gameState.globals.leftScore != lastGameGlobals.leftScore || gameState.globals.rightScore != lastGameGlobals.rightScore) {
-        dingAudio.currentTime = 0;
-        dingAudio.play();
-      }
-      lastGameGlobals = clone(gameState.globals);
+      console.log("sending globals", clone(gameState.globals));
+      // lastGameGlobals = clone(gameState.globals);
     }
   } else {
     // Are we the first player?
     if (myPeerName in peers && Object.keys(peers).length == 1) {
       me.new = false;
     }
+    if (Math.random() <= globalsBroadcastProb) {
+      me.new = false;
+    }
   }
 
+  // console.log("sending update", clone(update));
   broadcast(update);
+  globalsBroadcastProb = Math.max(globalsBroadcastProb*0.7, 1/30/gameState.globals.networkFPS);
 
   window.setTimeout(broadcastStep, 1000 / gameState.globals.networkFPS);
 }
@@ -483,6 +498,11 @@ window.setTimeout(broadcastStep, 100);
 
 document.addEventListener("keydown", event => { keysDown.addAsSet(event.key);    if (usedKeys.includes(event.key)) { event.preventDefault() } });
 document.addEventListener("keyup",   event => { keysDown.removeAsSet(event.key); if (usedKeys.includes(event.key)) { event.preventDefault() } });
+
+function playDing() {
+  dingAudio.currentTime = 0;
+  dingAudio.play();
+}
 
 function stylePlayer(peerName, object, elem) {
   let borderWidth   = object.isBall ? Math.ceil(object.radius / 25) : 2;
