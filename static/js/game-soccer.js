@@ -26,7 +26,7 @@ let defaultGlobals = {
   kickOffAxisGlide       : 0.0005, // Easier dribbling/aiming by reducing ball motion that's off-axis from player motion.
   wallSpringConstant     : 100,
   objectSpringConstant   : 200,
-  networkFPS             : 30,
+  networkFPS             : 1,
   maxForce               : 2000,
   grrrringSoundLevel     : 0.25,
   grrrringTransientLevel : 0.6,
