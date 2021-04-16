@@ -194,10 +194,11 @@ function broadcast(data) {
     // console.log(peers[peerName].dataChan);
     if (peers[peerName].dataChan && peers[peerName].dataChan.readyState === "open") {
       // console.log("broadcasting ", data);
-      window.setTimeout(() => { peers[peerName].dataChan.send(json_str); }, Math.random()*2000)
-      if (Math.random() > 0.5) {
-        window.setTimeout(() => { peers[peerName].dataChan.send(json_str); }, Math.random()*2000)
-      }
+      //window.setTimeout(() => { peers[peerName].dataChan.send(json_str); }, Math.random()*2000)
+      // if (Math.random() > 0.5) {
+        // window.setTimeout(() => { peers[peerName].dataChan.send(json_str); }, Math.random()*2000)
+      // }
+      peers[peerName].dataChan.send(json_str);
     }
   }
 };

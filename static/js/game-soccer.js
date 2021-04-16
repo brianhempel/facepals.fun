@@ -26,7 +26,7 @@ let defaultGlobals = {
   kickOffAxisGlide       : 0.0005, // Easier dribbling/aiming by reducing ball motion that's off-axis from player motion.
   wallSpringConstant     : 100,
   objectSpringConstant   : 200,
-  networkFPS             : 1,
+  networkFPS             : 30,
   maxForce               : 2000,
   grrrringSoundLevel     : 0.25,
   grrrringTransientLevel : 0.6,
@@ -226,7 +226,7 @@ function gameStep() {
   }
 
   // Check if scored (ball crosses either goal line)
-  if (!ball.disabled || me.isBall) {
+  if ((!ball.disabled && objectKeysIOwn.includes("ball"))|| me.isBall) {
     let ballY = 0.5 * (oldBallY + ball.y); // Reasonable guess without doing intersection math.
     if (oldBallX >= objects.pole1.x && ball.x < objects.pole1.x) {
       if (ballY < objects.pole2.y && ballY > objects.pole1.y) {
@@ -338,20 +338,27 @@ function handleMessage(peerName, remoteGameState) {
       } else if (typeof remoteObj[remoteKey] === "object") {
         if (objectKeysIOwn.includes(remoteKey) && gameState.objects[peerName] && gameState.objects[remoteKey]) {
           // Only relinquish ownership if I think the object is closer to the peer in question.
-          let dxMe   = gameState.objects.me.x        - gameState.objects[remoteKey].x;
-          let dyMe   = gameState.objects.me.y        - gameState.objects[remoteKey].y;
-          let dxPeer = gameState.objects[peerName].x - gameState.objects[remoteKey].x;
-          let dyPeer = gameState.objects[peerName].y - gameState.objects[remoteKey].y;
+          let dxMe   = gameState.objects.me.x        - gameState.objects[localKey].x;
+          let dyMe   = gameState.objects.me.y        - gameState.objects[localKey].y;
+          let dxPeer = gameState.objects[peerName].x - gameState.objects[localKey].x;
+          let dyPeer = gameState.objects[peerName].y - gameState.objects[localKey].y;
           if (dxMe*dxMe + dyMe*dyMe > dxPeer*dxPeer + dyPeer*dyPeer) {
             objectKeysIOwn.removeAsSet(remoteKey);
             update(localObj[localKey], remoteObj[remoteKey]);
           } else {
             // Ownership conflict. Split the difference.
-            gameState.objects[remoteKey].x  = 0.5 * (gameState.objects[remoteKey].x  + remoteObj[remoteKey].x)
-            gameState.objects[remoteKey].y  = 0.5 * (gameState.objects[remoteKey].y  + remoteObj[remoteKey].y)
-            gameState.objects[remoteKey].vx = 0.5 * (gameState.objects[remoteKey].vx + remoteObj[remoteKey].vx)
-            gameState.objects[remoteKey].vy = 0.5 * (gameState.objects[remoteKey].vy + remoteObj[remoteKey].vy)
+            gameState.objects[localKey].x  = 0.5 * (gameState.objects[localKey].x  + remoteObj[remoteKey].x)
+            gameState.objects[localKey].y  = 0.5 * (gameState.objects[localKey].y  + remoteObj[remoteKey].y)
+            gameState.objects[localKey].vx = 0.5 * (gameState.objects[localKey].vx + remoteObj[remoteKey].vx)
+            gameState.objects[localKey].vy = 0.5 * (gameState.objects[localKey].vy + remoteObj[remoteKey].vy)
           }
+        } else if ("vx" in remoteObj[remoteKey] && "vy" in remoteObj[remoteKey]) {
+            let futureX = remoteObj[remoteKey].x + remoteObj[remoteKey].vx*.5;
+            let futureY = remoteObj[remoteKey].y + remoteObj[remoteKey].vy*.5;
+            let dX = futureX - gameState.objects[localKey].x;
+            let dY = futureY - gameState.objects[localKey].y;
+            gameState.objects[localKey].vx = dX*2;
+            gameState.objects[localKey].vy = dY*2;
         } else {
           update(localObj[localKey], remoteObj[remoteKey]);
         }
