@@ -55,6 +55,9 @@ setup_server:
 	sudo systemctl daemon-reload
 	sudo service coturn restart
 
+	# For restarting the server
+	sudo apt install ruby
+
 	# Need swap space to build OCaml
 	# https://linuxize.com/post/how-to-add-swap-space-on-ubuntu-20-04/
 	sudo fallocate -l 2G /swapfile
