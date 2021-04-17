@@ -146,8 +146,7 @@ let atan2 = (y, x) => Math.atan2(y, x) / Math.PI * 180 // turns x,y coordinate i
 //   window.setTimeout(drawFrame, 1000 / renderFPS);
 // }
 
-function gameStep() {
-  let now = new Date();
+function gameStep(now) {
   let dt = Math.min((now - lastGameTime) / 1000, 0.1);
 
   let globals = gameState.globals;
@@ -559,7 +558,8 @@ function stylePlayer(peerName, object, elem) {
 }
 
 function tick() {
-  gameStep();
+  let now = new Date();
+  gameStep(now);
 
   for (peerName in peers) {
     if (peerName in gameState.objects) {
@@ -592,7 +592,8 @@ function tick() {
   //grrrr.style.width        = grrrrRemaining * 50 + "px";
   grrrr.style.transform    = "scale(" + Math.sqrt(Math.max(grrrrRemaining/2,0)) + ")"
 
-  requestAnimationFrame(tick);
+  let frameDuration = ((new Date()) - now) / 1000;
+  window.setTimeout(tick, Math.max(1, (1/60 - frameDuration) * 1000));
 }
 
 function formatScore(score) {
@@ -602,8 +603,6 @@ function formatScore(score) {
     return score.toString();
   }
 }
-
-requestAnimationFrame(tick); //asks browser to run the tick function the next time you do an animation frame (1/60 second)
 
 window.addEventListener('DOMContentLoaded', (event) => { // when most of html is loaded, run this!
   let colors = ["black", "#ddd", "blue", "#a0a", "maroon", "#e70", "#cc0", "#0a0", "#0cc"];
@@ -695,4 +694,6 @@ window.addEventListener('DOMContentLoaded', (event) => { // when most of html is
   window.deflateAudio.preload = "auto";
   window.deflateAudio.loop = "true";
   controls.appendChild(window.deflateAudio);
+
+  window.setTimeout(tick, 1);
 });
