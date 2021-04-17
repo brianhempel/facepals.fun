@@ -582,8 +582,6 @@ function tick() {
   // Update score elements
   leftScoreElem.innerText  = formatScore(gameState.globals.leftScore);
   rightScoreElem.innerText = formatScore(gameState.globals.rightScore);
-  grrrr.style.overflow     = "hidden";
-  grrrr.style.display      = "inline-block";
   //grrrr.style.width        = grrrrRemaining * 50 + "px";
   grrrr.style.transform    = "scale(" + Math.sqrt(Math.max(grrrrRemaining/2,0)) + ")"
 
@@ -620,16 +618,19 @@ window.addEventListener('DOMContentLoaded', (event) => { // when most of html is
   };
 
   // Text "choose a color" is placed in colorPicker span
-  let colornote = document.createElement("p");
-  colornote.style.padding="10px";
+  let colornote = document.createElement("span");
   let colortext = document.createTextNode("Choose a color!");
   colornote.appendChild(colortext);
-  colorPicker.appendChild(colornote);
+  colornote.style.display = "inline-block";
+  colornote.style.verticalAlign = "middle";
+  colornote.style.margin = "0 1em";
+  controls.appendChild(colornote);
 
   colors.forEach(color => {
     let swatch = document.createElement("span");
     swatch.style.backgroundColor = color;
     swatch.style.display = "inline-block";
+    swatch.style.verticalAlign = "middle";
     swatch.style.width = "55px";
     swatch.style.height = "30px";
     swatch.style.cursor = "pointer";
@@ -650,8 +651,9 @@ window.addEventListener('DOMContentLoaded', (event) => { // when most of html is
 
   let ballButton = document.createElement('button');
   ballButton.innerText = "I'm the ball!";
+  ballButton.style.display = "inline-block";
+  ballButton.style.verticalAlign = "middle";
   ballButton.style.margin = "0 1em";
-  ballButton.style.verticalAlign = "super";
 
   ballButton.addEventListener('click', event => {
     if ( me.isBall ) {
@@ -671,7 +673,9 @@ window.addEventListener('DOMContentLoaded', (event) => { // when most of html is
 
   window.grrrr = document.createElement('span');
   window.grrrr.innerText = '"Grrrr!"';
-  window.grrrr.style.verticalAlign = "super";
+  window.grrrr.style.display = "inline-block";
+  window.grrrr.style.verticalAlign = "middle";
+  window.grrrr.style.overflow = "hidden";
   controls.appendChild(window.grrrr);
 
   window.dingAudio = document.createElement('audio');
