@@ -375,6 +375,11 @@ function handleMessage(peerName, remoteGameState) {
               let dfY = futureY - gameState.objects[localKey].y;
               gameState.objects[localKey].vx = dfX/gameState.globals.smoothingSeconds;
               gameState.objects[localKey].vy = dfY/gameState.globals.smoothingSeconds;
+              delete remoteGameObj.x;
+              delete remoteGameObj.y;
+              delete remoteGameObj.vx;
+              delete remoteGameObj.vy;
+              update(localObj[localKey], remoteObj[remoteKey]);
             }
         } else {
           update(localObj[localKey], remoteObj[remoteKey]);
