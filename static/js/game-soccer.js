@@ -473,11 +473,7 @@ function broadcastStep() {
   // objectKeysIOwn.clear();
 
   if (!me.new) {
-    var anyNew = false;
-    for (peerName in peers) {
-      if (peerName in gameState.objects && gameState.objects[peerName].new) { anyNew = true; }
-    }
-    if (anyNew || Math.random() <= globalsBroadcastProb) {
+    if (Math.random() <= globalsBroadcastProb) {
     // if (anyNew || !gameGlobalsMatch(lastGameGlobals, gameState.globals) || Math.random() <= globalsBroadcastProb) {
       update.globals = gameState.globals;
       console.log("sending globals", clone(gameState.globals));
@@ -493,6 +489,12 @@ function broadcastStep() {
     }
   }
 
+  for (peerName in peers) {
+    if (peerName in gameState.objects && gameState.objects[peerName].new) {
+      console.log("sending globals only to " + peerName, clone(gameState.globals));
+      send_to_peer(peerName, JSON.stringify({ globals: gameState.globals }));
+    }
+  }
   // console.log("sending update", clone(update));
   broadcast(update);
   globalsBroadcastProb = Math.max(globalsBroadcastProb*0.7, 1/30/gameState.globals.networkFPS);
