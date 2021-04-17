@@ -17,22 +17,16 @@ a {
   color: blue;
 }
 
-form {
-  text-align: center;
-  position: relative;
-  width: 50%;
-  margin: 4em auto 0;
-}
-
 input[type=text], button {
   font-family: Impact, Charcoal, Helvetica Inserat, Bitstream Vera Sans Bold, Arial Black, Tahoma, sans-serif;
   font-size: 24px;
   text-align: center;
-  padding: 0.2em;
+  padding: 0.25em;
 }
 
 button {
   background-color: bisque;
+  cursor: pointer;
 }
 
 form input,
