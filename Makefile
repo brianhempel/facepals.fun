@@ -14,7 +14,8 @@ dev_setup:
 	opam install opium core
 
 run: server
-	ulimit -S -n $(ulimit -Hn); ./server
+  # Can't seem to catch Unix errors in-process, so just restart the server immediately.
+	ulimit -S -n $(ulimit -Hn); ruby -e 'loop { system("./server") }'
 
 renew_cert:
 	sudo certbot renew
