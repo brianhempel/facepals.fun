@@ -2,14 +2,19 @@ body {
   margin: 0.1em auto;
   width: 1280px;
   background: #659dbd;
-  font-family: 'Impact', Verdana, Geneva, Tahoma, sans-serif;
+  font-family: Impact, Charcoal, Helvetica Inserat, Bitstream Vera Sans Bold, Arial Black, Tahoma, sans-serif;
+  font-weight: bold;
   color: white;
-  font-size: 30px;
+  font-size: 28px;
 }
 
 h1, p {
   text-align: center;
   margin: 0.2em 0;
+}
+
+a {
+  color: blue;
 }
 
 form {
@@ -20,7 +25,7 @@ form {
 }
 
 input[type=text], button {
-  font-family: 'Impact', Verdana, Geneva, Tahoma, sans-serif;
+  font-family: Impact, Charcoal, Helvetica Inserat, Bitstream Vera Sans Bold, Arial Black, Tahoma, sans-serif;
   font-size: 24px;
   text-align: center;
   padding: 0.2em;
