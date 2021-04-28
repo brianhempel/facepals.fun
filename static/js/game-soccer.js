@@ -213,12 +213,12 @@ function gameStep(now) {
     object.x += object.vx * dt;
     object.y += object.vy * dt;
 
-    let effectiveRadius = object.radius
+    let effectiveRadius = object.radius;
     if (key === "ball"){
-      effectiveRadius *= -1
+      effectiveRadius *= -1;
     }
     else if(object.isBall && (object.y < objects.pole1.y || object.y > objects.pole2.y)){
-      effectiveRadius *= -1
+      effectiveRadius *= -1;
     }
 
     if (object.x + effectiveRadius < 0) {
@@ -530,6 +530,11 @@ function stylePlayer(peerName, object, elem) {
     shakeX = (-1 + 2*Math.random()) * object.radius / 10;
     shakeY = (-1 + 2*Math.random()) * object.radius / 10;
   }
+
+  window.grrrr.style.marginLeft = shakeX;
+  window.grrrr.style.marginRight = -1*shakeX;
+  window.grrrr.style.marginTop = shakeY;
+  window.grrrr.style.marginBottom = -1*shakeY;
 
   if (object.isBall) {
     elem.style.boxSizing      = "border-box";
