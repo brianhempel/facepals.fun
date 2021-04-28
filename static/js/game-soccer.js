@@ -213,17 +213,25 @@ function gameStep(now) {
     object.x += object.vx * dt;
     object.y += object.vy * dt;
 
-    if (object.x + object.radius < 0) {
-      object.vx += clampForce((0 - (object.x + object.radius)) * globals.wallSpringConstant) * dt;
+    let effectiveRadius = object.radius
+    if (key === "ball"){
+      effectiveRadius *= -1
     }
-    if (object.x - object.radius > gameW) {
-      object.vx -= clampForce(((object.x - object.radius) - gameW) * globals.wallSpringConstant) * dt;
+    else if(object.isBall && (object.y < objects.pole1.y || object.y > objects.pole2.y)){
+      effectiveRadius *= -1
     }
-    if (object.y + object.radius < 0) {
-      object.vy += clampForce((0 - (object.y + object.radius)) * globals.wallSpringConstant) * dt;
+
+    if (object.x + effectiveRadius < 0) {
+      object.vx += clampForce((0 - (object.x + effectiveRadius)) * globals.wallSpringConstant) * dt;
     }
-    if (object.y - object.radius > gameH) {
-      object.vy -= clampForce(((object.y - object.radius) - gameH) * globals.wallSpringConstant) * dt;
+    if (object.x - effectiveRadius > gameW) {
+      object.vx -= clampForce(((object.x - effectiveRadius) - gameW) * globals.wallSpringConstant) * dt;
+    }
+    if (object.y + effectiveRadius < 0) {
+      object.vy += clampForce((0 - (object.y + effectiveRadius)) * globals.wallSpringConstant) * dt;
+    }
+    if (object.y - effectiveRadius > gameH) {
+      object.vy -= clampForce(((object.y - effectiveRadius) - gameH) * globals.wallSpringConstant) * dt;
     }
   }
 
