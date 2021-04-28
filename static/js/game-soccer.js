@@ -688,11 +688,13 @@ window.addEventListener('DOMContentLoaded', (event) => { // when most of html is
   window.dingAudio = document.createElement('audio');
   window.dingAudio.src = "/static/ding.mp3"
   window.dingAudio.preload = "auto";
+  window.dingAudio.volume = .2;
   controls.appendChild(window.dingAudio);
 
   window.deflateAudio = document.createElement('audio');
   window.deflateAudio.src = "/static/deflate_long.mp3"
   window.deflateAudio.preload = "auto";
+  window.deflateAudio.volume = .2
   window.deflateAudio.loop = "true";
   controls.appendChild(window.deflateAudio);
 
