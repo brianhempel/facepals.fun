@@ -164,13 +164,6 @@ function makeOnTrackHandler(peerName) {
     }
 
     if (!peers[peerName].vidElem) {
-      let vidElem                = document.createElement("video");
-      vidElem.width              = miniFaceSize;
-      vidElem.height             = miniFaceSize;
-      myFaceCanvas.before(vidElem);
-      vidElem.style.borderRadius = "" + (miniFaceSize / 2) + "px";
-      vidElem.style.position     = "absolute";
-      peers[peerName].vidElem    = vidElem;
       vidElem.srcObject          = event.streams[0];
       vidElem.play();
     }
@@ -277,6 +270,14 @@ function pollForOfferFrom(peerName) {
         peers[peerName].dataChan.onmessage = makeOnMessageHandler(peerName);
         peers[peerName].dataChan.onopen    = event => console.log("Channel opened to " + peerName);
         peers[peerName].dataChan.onclose   = event => console.log("Channel closed to " + peerName);
+
+        let vidElem                = document.createElement("video");
+        vidElem.width              = miniFaceSize;
+        vidElem.height             = miniFaceSize;
+        myFaceCanvas.before(vidElem);
+        vidElem.style.borderRadius = "" + (miniFaceSize / 2) + "px";
+        vidElem.style.position     = "absolute";
+        peers[peerName].vidElem    = vidElem;
       };
       peerConn.onicecandidate  = makeOnIceCandidateHandler(peerName);
       peerConn.oniceconnectionstatechange = _ => {
@@ -355,6 +356,15 @@ function pollForPeers() {
             dataChan.onopen          = event => console.log("Channel opened to " + peerName);
             dataChan.onclose         = event => console.log("Channel closed to " + peerName);
             peers[peerName].dataChan = dataChan;
+            let vidElem                = document.createElement("video");
+            /////
+            vidElem.width              = miniFaceSize;
+            vidElem.height             = miniFaceSize;
+            myFaceCanvas.before(vidElem);
+            vidElem.style.borderRadius = "" + (miniFaceSize / 2) + "px";
+            vidElem.style.position     = "absolute";
+            peers[peerName].vidElem    = vidElem;
+            //////
             peerConn.onicecandidate = makeOnIceCandidateHandler(peerName);
             peerConn.oniceconnectionstatechange = _ => {
               iceLog += (new Date()).toISOString() + "      " + peerName + " ICE state " + peerConn.iceConnectionState + "\n";
