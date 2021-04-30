@@ -288,8 +288,10 @@ function pollForOfferFrom(peerName) {
           iceLog += (new Date()).toISOString() + "      " + peerName + " ICE icecandidateerror 701 " + " " + event.url + " " + event.errorText + "\n";
         }
       });
-      peerConn.addTrack(myFaceStream.getVideoTracks()[0], myVidStream);
-      peerConn.addTrack(myVidStream.getAudioTracks()[0], myVidStream);
+      if (myVidStream) {
+        peerConn.addTrack(myFaceStream.getVideoTracks()[0], myVidStream);
+        peerConn.addTrack(myVidStream.getAudioTracks()[0], myVidStream);
+      }
       peers[peerName].peerConn = peerConn;
     }
     peerConn.ontrack = makeOnTrackHandler(peerName);
@@ -363,8 +365,10 @@ function pollForPeers() {
                 iceLog += (new Date()).toISOString() + "      " + peerName + " ICE icecandidateerror 701 " + " " + event.url + " " + event.errorText + "\n";
               }
             });
-            peerConn.addTrack(myFaceStream.getVideoTracks()[0], myVidStream);
-            peerConn.addTrack(myVidStream.getAudioTracks()[0], myVidStream);
+            if (myVidStream) {
+              peerConn.addTrack(myFaceStream.getVideoTracks()[0], myVidStream);
+              peerConn.addTrack(myVidStream.getAudioTracks()[0], myVidStream);
+            }
             peers[peerName].peerConn = peerConn;
           }
           peerConn
@@ -414,7 +418,7 @@ function pollForPeers() {
       // Set to 60kbps video
       // console.log(peers[peerName].peerConn.getSenders());
       peers[peerName].peerConn.getSenders().forEach(sender => {
-        if (sender.track.kind === "video") {
+        if (sender.track?.kind === "video") {
           let params = sender.getParameters();
           params.encodings[0].maxBitrate = 60*1000;
           sender.setParameters(params);
@@ -533,9 +537,11 @@ function waitForOpenCVThenGo() {
   if (window.opencvDownloaded) {
     loadingElem.remove();
 
+    acquirePeerName();
+
     navigator.mediaDevices
     .getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: 1 }, video: { width: 384, height: 288 } })
-    .then(stream => {
+    .then(function (stream) {
       myVidStream               = stream;
       myWidth                   = stream.getVideoTracks()[0].getSettings().width;
       myHeight                  = stream.getVideoTracks()[0].getSettings().height;
@@ -628,7 +634,6 @@ window.addEventListener('DOMContentLoaded', (event) => {
 
     window.setTimeout(drawFace, 100);
     // window.setTimeout(faceDetect, 500);
-    acquirePeerName();
   });
 
   setupOpenCV();
