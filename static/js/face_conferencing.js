@@ -163,9 +163,9 @@ function makeOnTrackHandler(peerName) {
       return;
     }
 
-    if (peers[peerName].vidElem) {
-      peers[peerName].vidElem.srcObject = event.streams[0];
-      peers[peerName].vidElem.play();
+    if (!peers[peerName].vidElem) {
+      vidElem.srcObject          = event.streams[0];
+      vidElem.play();
     }
   };
 }
@@ -289,11 +289,11 @@ function pollForOfferFrom(peerName) {
           iceLog += (new Date()).toISOString() + "      " + peerName + " ICE icecandidateerror 701 " + " " + event.url + " " + event.errorText + "\n";
         }
       });
-      peers[peerName].peerConn = peerConn;
       if (myVidStream) {
         peerConn.addTrack(myFaceStream.getVideoTracks()[0], myVidStream);
         peerConn.addTrack(myVidStream.getAudioTracks()[0], myVidStream);
       }
+      peers[peerName].peerConn = peerConn;
     }
     peerConn.ontrack = makeOnTrackHandler(peerName);
     window.setTimeout(() => pollForIceCandidates(peerName, 100), 100);
@@ -375,11 +375,11 @@ function pollForPeers() {
                 iceLog += (new Date()).toISOString() + "      " + peerName + " ICE icecandidateerror 701 " + " " + event.url + " " + event.errorText + "\n";
               }
             });
-            peers[peerName].peerConn = peerConn;
             if (myVidStream) {
               peerConn.addTrack(myFaceStream.getVideoTracks()[0], myVidStream);
               peerConn.addTrack(myVidStream.getAudioTracks()[0], myVidStream);
             }
+            peers[peerName].peerConn = peerConn;
           }
           peerConn
             .createOffer({
@@ -427,22 +427,11 @@ function pollForPeers() {
     if (peers[peerName].peerConn) {
       // Set to 60kbps video
       // console.log(peers[peerName].peerConn.getSenders());
-
-      let senders = peers[peerName].peerConn.getSenders();
-
-      // console.log(senders);
-      if (myVidStream && senders[0] && senders[0]?.track === null) {
-        peers[peerName].peerConn.addTrack(myFaceStream.getVideoTracks()[0], myVidStream);
-        peers[peerName].peerConn.addTrack(myVidStream.getAudioTracks()[0], myVidStream);
-      }
-
-      senders.forEach(sender => {
+      peers[peerName].peerConn.getSenders().forEach(sender => {
         if (sender.track?.kind === "video") {
           let params = sender.getParameters();
-          if (params.encodings[0]) {
-            params.encodings[0].maxBitrate = 60*1000;
-            sender.setParameters(params);
-          }
+          params.encodings[0].maxBitrate = 60*1000;
+          sender.setParameters(params);
         }
       });
     }
@@ -560,12 +549,9 @@ function waitForOpenCVThenGo() {
 
     acquirePeerName();
 
-    window.setTimeout(() => {
-
-
     navigator.mediaDevices
     .getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: 1 }, video: { width: 384, height: 288 } })
-    .then(stream => {
+    .then(function (stream) {
       myVidStream               = stream;
       myWidth                   = stream.getVideoTracks()[0].getSettings().width;
       myHeight                  = stream.getVideoTracks()[0].getSettings().height;
@@ -589,11 +575,8 @@ function waitForOpenCVThenGo() {
       setupSoundMeter(stream);
 
       myVid.play();
-
     }).catch(e => console.error('getUserMedia: ', e));
-
-    }, 5000);
-} else {
+  } else {
     window.setTimeout(waitForOpenCVThenGo, 50);
   }
 }
@@ -660,7 +643,6 @@ window.addEventListener('DOMContentLoaded', (event) => {
     }
 
     window.setTimeout(drawFace, 100);
-
     // window.setTimeout(faceDetect, 500);
   });
 
