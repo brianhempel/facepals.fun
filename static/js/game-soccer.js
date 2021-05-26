@@ -244,6 +244,7 @@ function gameStep(now) {
         gameState.globals.rightScore += 1;
         globalsBroadcastProb = 1.0;
         playDing();
+        playAnim(rightScoreElem);
         // console.log(gameState.globals);
         ball.x  = defaultBallParams.x;
         ball.y  = defaultBallParams.y;
@@ -257,6 +258,7 @@ function gameStep(now) {
         gameState.globals.leftScore += 1;
         globalsBroadcastProb = 1.0;
         playDing();
+        playAnim(leftScoreElem);
         // console.log(gameState.globals);
         ball.x  = defaultBallParams.x;
         ball.y  = defaultBallParams.y;
@@ -399,9 +401,13 @@ function handleMessage(peerName, remoteGameState) {
   if (remoteGameState?.globals) {
     console.log("received globals", clone(remoteGameState.globals));
   }
-  if ((remoteGameState?.globals?.leftScore  !== undefined && gameState.globals.leftScore  != remoteGameState?.globals?.leftScore) ||
-      (remoteGameState?.globals?.rightScore !== undefined && gameState.globals.rightScore != remoteGameState?.globals?.rightScore)) {
+  if (remoteGameState?.globals?.leftScore  !== undefined && gameState.globals.leftScore  != remoteGameState?.globals?.leftScore) {
     playDing();
+    playAnim(leftScoreElem);
+  }
+  if (remoteGameState?.globals?.rightScore !== undefined && gameState.globals.rightScore != remoteGameState?.globals?.rightScore) {
+    playDing();
+    playAnim(rightScoreElem);
   }
   update(gameState, remoteGameState);
 }
@@ -517,6 +523,17 @@ document.addEventListener("keyup",   event => { keysDown.removeAsSet(event.key);
 function playDing() {
   dingAudio.currentTime = 0;
   dingAudio.play();
+}
+function playAnim(scoredPlayer) {
+  //var colorrr = Math.random().toString().substr(2, 6);
+  //scoredPlayer.style.background = "#" + colorrr;
+  scoredPlayer.style.transition = "linear .2s" //this shouldn't be in the function
+  scoredPlayer.style.boxShadow = "0px 0px 100px orange";
+  scoredPlayer.style.transform = "scale(1.1)";
+  setTimeout(() => {  
+    scoredPlayer.style.boxShadow = "none"; 
+    scoredPlayer.style.transform = "scale(1)"
+  }, 500);
 }
 
 function stylePlayer(peerName, object, elem) {
