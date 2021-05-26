@@ -1,14 +1,16 @@
-let myVid           = document.getElementById('myVid');
-let myVidCanvas     = document.createElement('canvas');
+let myVid                       = document.getElementById('myVid');
+let myVidCanvas                 = document.createElement('canvas');
 var myVidCanvasCtx;
-let myFaceCanvas    = document.getElementById('myFaceCanvas');
-let loadingElem     = document.getElementById('loading');
-let debugInfoButton = document.getElementById('debugInfoButton');
-let debugInfoElem   = document.getElementById('debugInfo');
-// let miniFaceSize    = 64;
-let miniFaceSize    = 80;
-myFaceCanvas.width  = miniFaceSize;
-myFaceCanvas.height = miniFaceSize;
+let myFaceCanvas                = document.getElementById('myFaceCanvas');
+let loadingElem                 = document.getElementById('loading');
+let audioDropdownElem           = document.getElementById('audioDropdown');
+let videoDropdownElem           = document.getElementById('videoDropdown');
+let debugInfoButton             = document.getElementById('debugInfoButton');
+let debugInfoElem               = document.getElementById('debugInfo');
+// let miniFaceSize             = 64;
+let miniFaceSize                = 80;
+myFaceCanvas.width              = miniFaceSize;
+myFaceCanvas.height             = miniFaceSize;
 myFaceCanvas.style.borderRadius = "" + (miniFaceSize / 2) + "px";
 var myWidth, myHeight;
 var faceDetectionWorker;
@@ -17,9 +19,9 @@ var targetFaceCX, targetFaceCY, targetFaceSize;
 var myVidStream;
 var myFaceStream;
 var myPeerName;
-var roomName        = window.location.href.match(/\/rooms\/([A-Za-z0-9'_!\-]+)/)[1];
-var peers           = {};
-var iceLog          = "";
+var roomName                    = window.location.href.match(/\/rooms\/([A-Za-z0-9'_!\-]+)/)[1];
+var peers                       = {};
+var iceLog                      = "";
 
 
 
@@ -529,12 +531,45 @@ function setupSoundMeter(stream) {
   window.setTimeout(updateLevels, 50);
 }
 
+function refreshAVSourceOptions() {
+  navigator.mediaDevices.enumerateDevices().then(deviceInfos => {
+    const oldAudioDeviceId = audioDropdownElem.value;
+    const oldVideoDeviceId = videoDropdownElem.value;
+
+    audioDropdownElem.innerHTML = "";
+    videoDropdownElem.innerHTML = "";
+
+    deviceInfos.forEach(deviceInfo => {
+      if (deviceInfo.kind === "audioinput") {
+        const option = document.createElement('option');
+        option.text  = deviceInfo.label || `Mic ${audioDropdownElem.length + 1}`;
+        option.value = deviceInfo.deviceId;
+        audioDropdownElem.appendChild(option);
+      } else if (deviceInfo.kind === 'videoinput') {
+        const option = document.createElement('option');
+        option.text  = deviceInfo.label || `Camera ${videoDropdownElem.length + 1}`;
+        option.value = deviceInfo.deviceId;
+        videoDropdownElem.appendChild(option);
+      }
+    });
+  }).catch(err => {
+    console.warn("Couldn't refresh AV source options", err)
+  });
+}
+
 function waitForOpenCVThenGo() {
   if (window.opencvDownloaded) {
     loadingElem.remove();
 
+    const audioDeviceIdConstraint = audioDropdownElem.value ? { exact: audioDropdownElem.value } : undefined;
+    const videoDeviceIdConstraint = videoDropdownElem.value ? { exact: videoDropdownElem.value } : undefined;
+
     navigator.mediaDevices
-    .getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: 1 }, video: { width: 384, height: 288 } })
+    .getUserMedia(
+      {
+        audio: { deviceId: audioDeviceIdConstraint, echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: 1 },
+        video: { deviceId: videoDeviceIdConstraint, width: 384, height: 288 }
+      })
     .then(stream => {
       myVidStream               = stream;
       myWidth                   = stream.getVideoTracks()[0].getSettings().width;
@@ -558,6 +593,7 @@ function waitForOpenCVThenGo() {
 
       setupSoundMeter(stream);
 
+      refreshAVSourceOptions(); // START HERE need to refresh in other places as well, and then do something when a option is selected.
       myVid.play();
     }).catch(e => console.error('getUserMedia: ', e));
   } else {
