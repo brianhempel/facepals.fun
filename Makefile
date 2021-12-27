@@ -18,9 +18,10 @@ run: server
 	ulimit -S -n $(ulimit -Hn); ruby -e 'loop { system("./server") }'
 
 renew_cert:
+	sudo service haproxy stop
 	sudo certbot renew
 	sudo sh -c "cat /etc/letsencrypt/live/facepals.fun/fullchain.pem /etc/letsencrypt/live/facepals.fun/privkey.pem > /etc/ssl/private/facepals.fun.pem"
-	sudo service haproxy restart
+	sudo service haproxy start
 
 setup_server:
 	# https://www.digitalocean.com/community/tutorials/initial-server-setup-with-ubuntu-20-04
