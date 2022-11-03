@@ -218,8 +218,8 @@ let get_ice_candidate req =
 
 (* Change to none during dev, but don't commit. *)
 let static_etag_opt =
-  (* None *)
-  Some (Stdio.In_channel.read_all ".git/refs/heads/main" |> String.trim)
+  None
+  (* Some (Stdio.In_channel.read_all ".git/refs/heads/main" |> String.trim) *)
 
 (*
   The protocol is to:

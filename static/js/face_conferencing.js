@@ -496,9 +496,11 @@ var soundLevelsRingI      = 0;
 var quarterSecondMeanSoundLevel = 0;
 var quarterSecondMinSoundLevel  = 0;
 var quarterSecondMaxSoundLevel  = 0;
-// START HERE hook up to game. (Players shake when grrring.)
+
+
 
 function setupSoundMeter(stream) {
+  // START HERE. need to kill this on AV change
   let context = new AudioContext();
   let source = context.createMediaStreamSource(stream);
   let processor = context.createScriptProcessor(512, 1, 1);
@@ -552,8 +554,10 @@ function refreshAVSourceOptions() {
         videoDropdownElem.appendChild(option);
       }
     });
+    window.setTimeout(refreshAVSourceOptions, 2000);
   }).catch(err => {
     console.warn("Couldn't refresh AV source options", err)
+    window.setTimeout(refreshAVSourceOptions, 2000);
   });
 }
 
@@ -591,10 +595,14 @@ function waitForOpenCVThenGo() {
       console.log(stream.getVideoTracks()[0].getSettings())
       console.log(stream.getAudioTracks()[0].getSettings())
 
-      setupSoundMeter(stream);
+      setupSoundMeter(stream); //
 
-      refreshAVSourceOptions(); // START HERE need to refresh in other places as well, and then do something when a option is selected.
-      myVid.play();
+      refreshAVSourceOptions();
+
+      audioDropdownElem.onchange = waitForOpenCVThenGo;
+      videoDropdownElem.onchange = waitForOpenCVThenGo;
+
+      myVid.play(); // Safe to run multiple times
     }).catch(e => console.error('getUserMedia: ', e));
   } else {
     window.setTimeout(waitForOpenCVThenGo, 50);
@@ -645,26 +653,29 @@ window.addEventListener('DOMContentLoaded', (event) => {
   myFaceStream = myFaceCanvas.captureStream(15);
 
   myVid.addEventListener('playing', () => {
-    function drawFace() {
-      // myCtx.drawImage(myVid, 0, 0);
+    // Only run once
+    if (!myPeerName) {
+      function drawFace() {
+        // myCtx.drawImage(myVid, 0, 0);
 
-      minDim = Math.min(myWidth, myHeight)
+        minDim = Math.min(myWidth, myHeight)
 
-      dist = ((targetFaceCX - faceCX)**2 + (targetFaceCY - faceCY)**2 + (targetFaceSize - faceSize)**2)**0.5 / faceSize
-      push = Math.min(dist*0.5, 1.0);
-      faceCX   = (1.0 - push)*faceCX + push*targetFaceCX;
-      faceCY   = (1.0 - push)*faceCY + push*targetFaceCY;
-      faceSize = (1.0 - push)*faceSize + push*targetFaceSize;
+        dist = ((targetFaceCX - faceCX)**2 + (targetFaceCY - faceCY)**2 + (targetFaceSize - faceSize)**2)**0.5 / faceSize
+        push = Math.min(dist*0.5, 1.0);
+        faceCX   = (1.0 - push)*faceCX + push*targetFaceCX;
+        faceCY   = (1.0 - push)*faceCY + push*targetFaceCY;
+        faceSize = (1.0 - push)*faceSize + push*targetFaceSize;
 
-      myFaceCtx.drawImage(myVid, faceCX - faceSize/2, faceCY - faceSize/2, faceSize, faceSize, 0, 0, miniFaceSize, miniFaceSize);
+        myFaceCtx.drawImage(myVid, faceCX - faceSize/2, faceCY - faceSize/2, faceSize, faceSize, 0, 0, miniFaceSize, miniFaceSize);
 
-      // window.setTimeout(drawFace, 1000 / 60);
-      window.setTimeout(drawFace, 1000 / 40);
+        // window.setTimeout(drawFace, 1000 / 60);
+        window.setTimeout(drawFace, 1000 / 40);
+      }
+
+      window.setTimeout(drawFace, 100);
+      // window.setTimeout(faceDetect, 500);
+      acquirePeerName();
     }
-
-    window.setTimeout(drawFace, 100);
-    // window.setTimeout(faceDetect, 500);
-    acquirePeerName();
   });
 
   setupOpenCV();
